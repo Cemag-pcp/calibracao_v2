@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+
+{% endblock %}
+
+<h1>{{ instrumento.tag }} - {{ instrumento.tipo_instrumento.nome }} - {{ instrumento.marca.nome }}</h1>
+<p>Responsável atual: {{ ultimo_responsavel.responsavel }}</p>
+<p>Setor alocado atualmente: {{ ultimo_responsavel.responsavel.setor.nome }}</p>
+<p>Status na fábrica: {{ instrumento.status_instrumento }}</p>
+<p>Status da calibração: {{ instrumento.status_calibracao }}</p>
+<p>Última calibração: {{ instrumento.ultima_calibracao }}</p>
+<p>Previsão para próxima calibração: {{ instrumento.proxima_calibracao }}</p>
+<p>Marca: {{ instrumento.marca.nome }}</p>
+<p>Intervalo de tempo entre calibrações: {{ instrumento.tempo_calibracao }} dias</p>
+
+<h2>Histórico de Calibrações</h2>
+<ul>
+    {% for calibracao in calibracoes %}
+    <li>
+        <p>Data de envio: {{calibracao.data_envio}}</p>
+
+        {% if not calibracao.data_retorno %}
+        <p>Data de retorno: Aguardando instrumento retornar</p>
+        {% else %}
+        <p>Data de retorno: {{ calibracao.data_retorno }}</p>
+        {% endif %}
+        
+        <p>Natureza: {{calibracao.natureza}}</p>
+        <p>Status: {{calibracao.status}}</p>
+        <p>Observação: {{calibracao.observacoes}}</p>
+        <p>Laboratório: {{ calibracao.laboratorio.nome }}</p>
+        
+        {% if not calibracao.analise_certificado %}
+        <p>Analise do certificado: Aguardando instrumento retornar</p>
+        {% else %}
+        <p>Analise do certificado: {{ calibracao.analise_certificado }}</p>
+        {% endif %}
+
+        <p>Certificado: {{ calibracao.certficado }}</p>
+
+    </li>
+    {% endfor %}
+</ul>
+
+{% if instrumento.status == 'vencido' %}
+<p style="color: red;">Este instrumento está vencido!</p>
+{% endif %}
+

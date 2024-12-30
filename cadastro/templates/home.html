@@ -1,0 +1,344 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block links %}
+    <link href="{% static 'css/timeline.css' %}" rel="stylesheet">
+{% endblock %}
+
+{% block content %}
+<table id="instrumentos-table" class="display">
+    <thead>
+        <tr>
+            <th>Tag</th>
+            <th>Tipo de Instrumento</th>
+            <th>Marca</th>
+            <th>Status</th>
+            <th>Última Calibração</th>
+            <th>Próxima Calibração</th>
+            <th>Status Calibração</th>
+            <th>Responsável</th>
+            <th>Descrição do Ponto</th>
+            <th>Faixa Nominal</th>
+            <th>Unidade</th>
+            <th>Tol. Admissível</th>
+            <th>Última Análise</th>
+            <th>Ação</th>
+        </tr>
+    </thead>
+</table>
+
+<!-- Modal para buscar qrcode -->
+<div id="modal-qrcode" class="modal fade" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modal-title-qrcode"></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="modal-body-qrcode">
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para buscar histórico de atualizações -->
+<div id="modal-historico" class="modal fade" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modal-title-historico"></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="modal-body-historico">
+                <!-- A timeline será carregada dinamicamente -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para enviar p/ calibração -->
+<div id="modal-enviar" class="modal fade" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modal-title-enviar">Enviar Instrumento para Calibração</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="modal-body-enviar">
+                <form id="formEnviar">
+                    <!-- Identificador do Instrumento -->
+                    <input type="hidden" name="tag-instrumento-envio" id="tag-instrumento-envio">
+                    <input type="hidden" name="pk-ponto-calibracao-enviar" id="pk-ponto-calibracao-enviar">
+
+                    <div class="row mb-3">
+                        <!-- Data de Envio -->
+                        <div class="col-sm-6">
+                            <label for="dataEnvio" class="form-label">Data de Envio</label>
+                            <input 
+                                type="date" 
+                                class="form-control" 
+                                name="dataEnvio" 
+                                id="dataEnvio" 
+                                required>
+                        </div>
+                        <!-- Responsável do Envio -->
+                        <div class="col-sm-6">
+                            <label for="responsavelEnvio" class="form-label">Responsável pelo Envio</label>
+                            <select class="form-control" name="responsavelEnvio" id="responsavelEnvio">
+                                <option value="">Selecione o responsável</option>
+                                {% for operador in operadores %}
+                                <option value="{{ operador.id }}">{{ operador.matricula }} - {{ operador.nome }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <!-- Laboratório -->
+                        <div class="col-sm-4">
+                            <label for="laboratorio" class="form-label">Laboratório</label>
+                            <select class="form-control" name="laboratorio" id="laboratorio" required>
+                                <option value="">Selecione um laboratório</option>
+                                {% for laboratorio in laboratorios %}
+                                <option value="{{ laboratorio.id }}">{{ laboratorio.nome }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <!-- Natureza -->
+                        <div class="col-sm-4">
+                            <label for="natureza" class="form-label">Natureza</label>
+                            <select class="form-control" name="natureza" id="natureza">
+                                <option value="">Selecione a natureza</option>
+                                {% for natureza in naturezas %}
+                                <option value="{{ natureza.0 }}">{{ natureza.1 }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <!-- Método -->
+                        <div class="col-sm-4">
+                            <label for="metodo" class="form-label">Método</label>
+                            <select class="form-control" name="metodo" id="metodo">
+                                <option value="">Selecione o método</option>
+                                {% for metodo in metodos %}
+                                <option value="{{ metodo.0 }}">{{ metodo.1 }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Botão de Envio -->
+                    <div class="modal-footer">
+                        <button type="submit" class="btn btn-success">Enviar</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de recebimento de calibração -->
+<div id="modal-recebimento" class="modal fade" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modal-title-recebimento">Recebimento de Calibração</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="modal-body-recebimento">
+                <form id="formRecebimento">
+                    <!-- ID do Instrumento -->
+                    <input type="hidden" name="id-instrumento-recebimento" id="id-instrumento-recebimento">
+                    <input type="hidden" name="pk-ponto-recebimento" id="pk-ponto-recebimento">
+
+                    <!-- Data de Recebimento -->
+                    <div class="mb-3">
+                        <label for="dataRecebimento" class="form-label">Data do Recebimento</label>
+                        <input 
+                            type="date" 
+                            class="form-control" 
+                            name="dataRecebimento" 
+                            id="dataRecebimento" 
+                            required
+                        >
+                    </div>
+
+                    <!-- Observação de Recebimento -->
+                    <div class="mb-3">
+                        <label for="obsRecebimento" class="form-label">Observação</label>
+                        <textarea 
+                            class="form-control" 
+                            name="obsRecebimento" 
+                            id="obsRecebimento" 
+                            rows="3"
+                            placeholder="Insira observações sobre o recebimento, se necessário."
+                        ></textarea>
+                    </div>
+
+                    <!-- Link de Certificado -->
+                    <div class="mb-3">
+                        <label for="linkCertificado" class="form-label">Link do Certificado</label>
+                        <input 
+                            type="url" 
+                            class="form-control" 
+                            name="linkCertificado" 
+                            id="linkCertificado" 
+                            placeholder="Insira o link do certificado, se disponível."
+                        >
+                    </div>
+
+                    <!-- Botão de Envio -->
+                    <div class="modal-footer">
+                        <button type="submit" class="btn btn-success">Enviar</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de analise da calibração -->
+<div id="modal-analise" class="modal fade" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modal-title-analise"></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="modal-body-analise">
+                <form id="formAnalise">
+                    
+                    <input type="hidden" name="id-instrumento-analise" id="id-instrumento-analise">
+                    
+                    <div class="row mb-3">
+                        <div class="col-sm-6">
+                            <!-- Incerteza -->
+                            <label for="incertezaAnalise">Incerteza</label>
+                            <input class="form-control" type="number" name="incertezaAnalise" id="incertezaAnalise" step="0.1" required>
+                        </div>
+                        <div class="col-sm-6">
+                            <!-- Tendência -->
+                            <label for="tendeciaAnalise">Tendência</label>
+                            <input class="form-control" type="number" name="tendeciaAnalise" id="tendeciaAnalise" step="0.1" required>
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-sm-6">
+                            <!-- Responsável pela análise -->
+                            <label for="responsavelAnalise">Responsável da análise</label>
+                            <select class="form-control" name="responsavelAnalise" id="responsavelAnalise" required>
+                                <option value="">-------</option>
+                                {% for operador in operadores %}
+                                <option value="{{ operador.id }}">{{ operador.matricula }} - {{ operador.nome }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-sm-6">
+                            <!-- Data da análise -->
+                            <label for="dataAnalise">Data da análise</label>
+                            <input class="form-control" type="date" name="dataAnalise" id="dataAnalise" required>
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-sm-6">
+                    
+                            <!-- Análise final -->
+                            <label for="resultadoAnalise">Resultado final</label>
+                            <select class="form-control" name="resultadoAnalise" id="resultadoAnalise" required>
+                                <option value="">-------</option>
+                                <option value="aprovado">Aprovado</option>
+                                <option value="reprovado">Reprovado</option>
+                            </select>
+                        </div>
+                    </div>
+                    <hr>
+                    <!-- Informações do instrumento -->
+                    <div class="text-center mb-3">
+                        <h1>Informações sobre o instrumento</h1>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-sm-6">
+                            <p><strong>Faixa Nominal:</strong> <span id="faixaNominal"></span></p>
+                        </div>
+                        <div class="col-sm-6">
+                            <p><strong>Tolerância Admissível:</strong> <span id="toleranciaAdmissivel"></span></p>
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-sm-6">
+                            <strong>Certificado:</strong>
+                            <a href="#" id="certificadoAtual" target="_blank" rel="noopener noreferrer">Visualizar Certificado</a>
+                        </div>
+                    </div>
+                    <!-- Botão de Envio -->
+                    <div class="modal-footer">
+                        <button type="submit" class="btn btn-success">Enviar</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal p/ escolher responsável -->
+<div id="modal-responsavel" class="modal fade" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modal-title-responsavel"></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="modal-body-responsavel">
+                <form id="formResponsavel">
+                    
+                    <input type="hidden" name="tag-instrumento-responsavel" id="tag-instrumento-responsavel">
+                    
+                    <div class="row mb-3">
+                        <div class="col-sm-6">
+                            <!-- Nome do responsável -->
+                            <label for="nome-responsavel">Escolha um responsável</label>
+                            <select class="form-control" name="nome-responsavel" id="nome-responsavel" required>
+                                <option value="">-------</option>
+                                {% for funcionario in funcionarios %}
+                                <option value="{{funcionario.id}}">{{funcionario.matricula}} - {{funcionario.nome}}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-sm-6">
+                            <!-- Data de entrega -->
+                            <label for="dataEntrega">Data da entrega</label>
+                            <input class="form-control" type="date" name="dataEntrega" id="dataEntrega" required>
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-sm-6">
+                            <!-- Link da ficha assinada -->
+                            <label for="linkFicha" class="form-label">Link da ficha</label>
+                            <input type="url" class="form-control" name="linkFicha" id="linkFicha" placeholder="Insira o link da ficha assinada, se disponível.">
+                        </div>
+                    </div>
+
+                    <!-- Botão de Envio -->
+                    <div class="modal-footer">
+                        <button type="submit" class="btn btn-success">Enviar</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+    <script src="{% static 'js/data-table-pc.js' %}"></script>
+    <script src="{% static 'js/acoes-pc.js' %}"></script>
+
+{% endblock %}
