@@ -5,10 +5,21 @@
     <link href="{% static 'css/timeline.css' %}" rel="stylesheet">
 {% endblock %}
 
+<style>
+    td.details-control {
+        background: url('https://www.datatables.net/examples/resources/details_open.png') no-repeat center center;
+        cursor: pointer;
+    }
+    tr.shown td.details-control {
+        background: url('https://www.datatables.net/examples/resources/details_close.png') no-repeat center center;
+    }
+</style>
+
 {% block content %}
 <table id="instrumentos-table" class="display">
     <thead>
         <tr>
+            <th></th>
             <th>Tag</th>
             <th>Tipo de Instrumento</th>
             <th>Marca</th>
@@ -17,11 +28,6 @@
             <th>Próxima Calibração</th>
             <th>Status Calibração</th>
             <th>Responsável</th>
-            <th>Descrição do Ponto</th>
-            <th>Faixa Nominal</th>
-            <th>Unidade</th>
-            <th>Tol. Admissível</th>
-            <th>Última Análise</th>
             <th>Ação</th>
         </tr>
     </thead>

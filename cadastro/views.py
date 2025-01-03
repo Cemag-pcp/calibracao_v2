@@ -44,7 +44,7 @@ def instrumentos_data(request):
     instrumentos = InfoInstrumento.objects.all()
 
     # Processar os dados para DataTable
-    instrumentos_detalhes = []
+    instrumentos_detalhes = {}
     for instrumento in instrumentos:
 
         # Adiciona os detalhes dos pontos de calibração
@@ -89,35 +89,41 @@ def instrumentos_data(request):
             else:
                 responsavel = None
 
-            # Para cada ponto de calibração, cria uma entrada separada
-            instrumentos_detalhes.append({
-                'ultimo_envio_pk': ultimo_envio.pk if ultimo_envio else None,
-                'tag': instrumento.tag,
-                'tipo_instrumento': instrumento.tipo_instrumento.nome,
-                'marca': instrumento.marca.nome,
-                'status_instrumento': instrumento.status_instrumento,
-                'ultima_calibracao': instrumento.ultima_calibracao,
-                'proxima_calibracao': proxima_calibracao,
-                'status_calibracao_string': status_calibracao,
-                'tempo_calibracao': instrumento.tempo_calibracao,
-                'responsavel': responsavel,
-                'analise_certificado': analise_certificado.analise_certificado if analise_certificado else None,
-                'status_calibracao': ultimo_envio.status if ultimo_envio else None,
+            # Agrupar os dados por TAG
+            if instrumento.tag not in instrumentos_detalhes:
+                instrumentos_detalhes[instrumento.tag] = {
+                    'id': instrumento.id,
+                    'tag': instrumento.tag,
+                    'tipo_instrumento': instrumento.tipo_instrumento.nome,
+                    'marca': instrumento.marca.nome,
+                    'status_instrumento': instrumento.status_instrumento,
+                    'ultima_calibracao': instrumento.ultima_calibracao,
+                    'proxima_calibracao': proxima_calibracao,
+                    'status_calibracao_string': status_calibracao,
+                    'status_calibracao': ultimo_envio.status if ultimo_envio else None,
+                    'tempo_calibracao': instrumento.tempo_calibracao,
+                    'responsavel': responsavel,
+                    'pontos_calibracao': []
+                }
 
+            # Adiciona os detalhes dos pontos ao agrupamento da tag
+            instrumentos_detalhes[instrumento.tag]['pontos_calibracao'].append({
+                'ultimo_envio_pk': ultimo_envio.pk if ultimo_envio else None,
                 'ponto_pk': ponto.pk,
                 'ponto_descricao': ponto.descricao,
                 'ponto_faixa_nominal': ponto.faixa_nominal,
                 'ponto_unidade': ponto.unidade,
                 'ponto_tolerancia_admissivel': ponto.tolerancia_admissivel,
-
+                'status_ponto_calibracao': ponto.status_ponto_calibracao,
                 'ultimo_certificado': analise_certificado.analise_certificado if analise_certificado else None,
-                'ultimo_pdf': ultimo_envio.pdf if ultimo_envio else None
+                'analise_certificado': analise_certificado.analise_certificado if analise_certificado else None,
+                'ultimo_pdf': ultimo_envio.pdf if ultimo_envio else None,
             })
 
     # Paginação
     page = int(request.GET.get('start', 0)) // int(request.GET.get('length', 10)) + 1
     limit = int(request.GET.get('length', 10))
-    paginator = Paginator(instrumentos_detalhes, limit)
+    paginator = Paginator(list(instrumentos_detalhes.values()), limit)
 
     try:
         instrumentos_page = paginator.page(page)

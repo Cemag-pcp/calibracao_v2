@@ -66,6 +66,10 @@ class TipoInstrumento(models.Model):
         return self.nome
 
 class PontoCalibracao(models.Model):
+    STATUS_PONTO_CALIBRACAO_CHOICES = (
+        ('ativo', 'Ativo'),
+        ('inativo', 'Inativo')
+    )
     descricao = models.CharField(max_length=100)
     instrumento = models.ForeignKey(
         'InfoInstrumento', 
@@ -76,9 +80,14 @@ class PontoCalibracao(models.Model):
     faixa_nominal = models.CharField(max_length=50)
     unidade = models.CharField(max_length=20)
     tolerancia_admissivel = models.FloatField(blank=True, null=True)
+    status_ponto_calibracao = models.CharField(
+        max_length=10, 
+        choices=STATUS_PONTO_CALIBRACAO_CHOICES, 
+        default='ativo'
+    )
 
     def __str__(self):
-        return f'{self.faixa_nominal} {self.unidade}'
+        return f'{self.descricao} ({self.faixa_nominal} {self.unidade})'
 
     class Meta:
         verbose_name = "Ponto de Calibração"
@@ -131,7 +140,7 @@ class InfoInstrumento(models.Model):
         return 'http://127.0.0.1:8000'
 
     def __str__(self):
-        return f'{self.tipo_instrumento.nome} - {self.marca.nome} - {self.status_instrumento}'
+        return f'{self.tag} - {self.tipo_instrumento.nome} - {self.marca.nome} - {self.status_instrumento}'
 
     class Meta:
         verbose_name = "Informação do Instrumento"

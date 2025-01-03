@@ -13,13 +13,13 @@ function abrirQrCodeModal(tag) {
         .catch(() => alert('Erro ao carregar o QR Code.'));
 }
 
-function abrirHistoricoModal(tag,pontoCalibracao) {
+function abrirHistoricoModal(tag,pontoCalibracao,pontoDescricao) {
     fetch(`/instrumento/historico/${tag}/${pontoCalibracao}/`)
         .then(response => response.json())
         .then(data => {
 
             // Atualiza o título do modal
-            document.getElementById('modal-title-historico').textContent = `Histórico do Instrumento: ${tag}`;
+            document.getElementById('modal-title-historico').textContent = `Histórico do Instrumento: ${tag} - ${pontoDescricao}`;
 
             // Seleciona o contêiner do corpo do modal
             const timelineContainer = document.getElementById('modal-body-historico');
@@ -66,16 +66,16 @@ function enviarCalibracao(tag,pontoCalibracao) {
 
 }
 
-function receberCalibracao(idEnvio,tag) {
-
+function receberCalibracao(idsEnvio, tag) {
     document.getElementById('modal-title-recebimento').textContent = `Recebimento do instrumento: ${tag}`;
-    document.getElementById('id-instrumento-recebimento').value = idEnvio;
+    console.log(idsEnvio)
+    document.getElementById('id-instrumento-recebimento').value = idsEnvio; // Transformando a lista em string
     document.getElementById('formRecebimento').reset();
 
     const modal = new bootstrap.Modal(document.getElementById('modal-recebimento'));
     modal.show();
-
 }
+
 
 function analisarCalibracao(idEnvio,tag,pontoCalibracao) {
 
@@ -138,11 +138,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
             } else {
 
+                const errorData = await response.json(); // Parse da resposta JSON
+
                 // Exibe uma mensagem de erro usando SweetAlert
                 Swal.fire({
                     icon: 'error',
                     title: 'Erro!',
-                    text: data.message || 'Algo deu errado, tente novamente.',
+                    text: errorData.message || 'Algo deu errado, tente novamente.',
                 });
             }
         } catch (error) {
@@ -168,6 +170,8 @@ document.addEventListener('DOMContentLoaded', () => {
         formData.forEach((value, key) => {
             jsonData[key] = value;
         });
+
+        console.log(jsonData)
 
         try {
             // Envia a requisição para o backend
@@ -205,12 +209,12 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
         } catch (error) {
-            console.error('Erro na requisição:', error);
+            const errorData = await response.json();
             // Exibe uma mensagem de erro genérica em caso de falha na requisição
             Swal.fire({
                 icon: 'error',
                 title: 'Erro de Conexão',
-                text: 'Erro ao enviar o formulário. Verifique sua conexão e tente novamente.',
+                text: errorData.message || 'Algo deu errado, tente novamente.',
             });
         }
     });
@@ -302,7 +306,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (response.ok) {
                 const data = await response.json(); // Parse da resposta JSON
-
+                
                 // Exibe uma mensagem de sucesso usando SweetAlert
                 Swal.fire({
                     icon: 'success',

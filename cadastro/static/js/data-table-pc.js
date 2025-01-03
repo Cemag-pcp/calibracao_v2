@@ -7,6 +7,7 @@ $(document).ready(function () {
             type: 'GET',
             data: function (d) {
                 // Adiciona os filtros personalizados, se necessário
+                // Exemplo:
                 // d.status = $('#filterStatus').val();
                 // d.area = $('#filterArea').val();
                 // d.solicitante = $('#filterSolicitante').val();
@@ -14,11 +15,18 @@ $(document).ready(function () {
             }
         },
         columns: [
-            { data: 'tag', title: 'Tag do Instrumento', orderable: true },
+            {
+                className: 'details-control',
+                orderable: false,
+                data: null,
+                defaultContent: '<i class="fa fa-plus-circle text-primary" title="Expandir"></i>',
+            },
+            { data: 'tag', title: 'Tag' },
             { data: 'tipo_instrumento', title: 'Tipo de Instrumento' },
             { data: 'marca', title: 'Marca' },
             { 
                 data: 'status_instrumento',
+                title: 'Status',
                 orderable: true, 
                 render: function(data, type, row) {
                     if (row.status_instrumento === 'ativo') {
@@ -38,20 +46,15 @@ $(document).ready(function () {
             },
             { data: 'ultima_calibracao', title: 'Última Calibração' },
             { data: 'proxima_calibracao', title: 'Próxima Calibração' },
-            { 
+            {
                 data: 'status_calibracao_string',
                 title: 'Status da Calibração',
-                render: function(data, type, row) {
-                    if (row.status_calibracao_string.includes("Atrasado")) {
-                        // Adiciona o ícone de atenção ao lado do texto
-                        return `
-                            ${row.status_calibracao_string} 
-                            <i class="fa fa-exclamation-circle text-danger" aria-hidden="true" title="Calibração atrasada"></i>
-                        `;
-                    } else {
-                        return `${row.status_calibracao_string}`;
+                render: function (data) {
+                    if (data.includes('Atrasado')) {
+                        return `<span class="text-danger">${data}</span>`;
                     }
-                }
+                    return data;
+                },
             },
             {   
                 data: 'responsavel',
@@ -64,59 +67,94 @@ $(document).ready(function () {
                     }
                 }
             },
-            { data: 'ponto_descricao', title: 'Descrição do Ponto' },
-            { data: 'ponto_faixa_nominal', title: 'Faixa Nominal' },
-            { data: 'ponto_unidade', title: 'Unidade' },
-            { data: 'ponto_tolerancia_admissivel', title: 'Tolerância Admissível' },
-            {
-                data: 'ultimo_certificado', // Define o campo de origem para a ordenação
-                orderable: true,
-                render: function(data, type, row) {
-                    if (type === 'display') {
-                        // Renderiza o conteúdo visual para exibição
-                        if (data === 'reprovado') {
-                            return `<span class="badge bg-danger">Reprovado</span>`;
-                        } else if (data === 'aprovado') {
-                            return `<span class="badge bg-success">Aprovado</span>`;
-                        } else {
-                            return `<span class="badge bg-warning">Pendente</span>`;
-                        }
-                    }
-                    // Retorna o valor bruto para ordenação e pesquisa
-                    return data;
-                }
-            },
             {
                 data: null, 
                 orderable: false, 
                 render: function(data, type, row) {
-                    
+
+                    const ultimoEnvioList = row.pontos_calibracao.map(ponto => ponto.ultimo_envio_pk);
+                    const analise_certificados = row.pontos_calibracao.map(ponto => ponto.analise_certificado);
+                    const contem_null = analise_certificados.some(certificado => certificado === null);
+                    const todos_certificados_true = analise_certificados.every(certificado => certificado === true);
+
                     let buttons = `
                         <button class="btn badge btn-primary btn-sm" onclick="abrirQrCodeModal('${row.tag}')">Ver QR Code</button>
                         <button class="btn badge btn-secondary btn-sm" onclick="abrirHistoricoModal('${row.tag}','${row.ponto_pk}')">Histórico</button>
-                    `;
+                    `; 
+
+                    console.log(row)
 
                     if (row.status_calibracao === 'enviado') {
-                        buttons += `<button class="btn badge btn-success btn-sm" onclick="receberCalibracao('${row.ultimo_envio_pk}','${row.tag}')">Receber</button>`;
-                    } else if (row.status_calibracao === 'recebido' && row.analise_certificado === null) {
-                        buttons += `<button class="btn badge btn-danger btn-sm" onclick="analisarCalibracao('${row.ultimo_envio_pk}','${row.tag}','${row.ponto_pk}')">Analisar</button>`;
-                    } else if (row.status_calibracao === 'recebido' && row.analise_certificado === true) {
+                        buttons += `<button class="btn badge btn-success btn-sm" onclick="receberCalibracao('${JSON.stringify(ultimoEnvioList)}','${row.tag}')">Receber</button>`;
+                    } else if (row.status_calibracao === 'recebido' && contem_null) {
+                        buttons += ``;
+                    } else if (row.status_calibracao === 'recebido' && todos_certificados_true) {
                         buttons += `<button class="btn badge btn-warning btn-sm" onclick="enviarCalibracao('${row.tag}','${row.ponto_pk}')">Enviar</button>`;
                     } else {
                         buttons += `<button class="btn badge btn-warning btn-sm" onclick="enviarCalibracao('${row.tag}','${row.ponto_pk}')">Enviar</button>`;
                     }
-
                     return buttons;
                 }
-            }
+            },
         ],
         order: [[1, 'asc']],
-        language: {
-            lengthMenu: "Exibir _MENU_ registros por página",
-            zeroRecords: "Nenhuma execução encontrada",
-            info: "Exibindo _START_ a _END_ de _TOTAL_ registros",
-            infoEmpty: "Nenhum registro disponível",
-            infoFiltered: "(filtrado de _MAX_ registros no total)"
+    });
+
+    $('#instrumentos-table tbody').on('click', 'td.details-control', function () {
+        const tr = $(this).closest('tr');
+        const row = table.row(tr);
+
+        if (row.child.isShown()) {
+            row.child.hide();
+            tr.removeClass('shown');
+        } else {
+            row.child(format(row.data())).show();
+            tr.addClass('shown');
         }
     });
+
+    function format(d) {
+        return `
+            <table cellpadding="5" cellspacing="0" border="0" style="padding-left:50px;">
+                ${d.pontos_calibracao
+                    .map(
+                        (p) => `
+                        <tr>
+                            <td>Descrição:</td><td>${p.ponto_descricao}</td>
+                            <td>Faixa Nominal:</td><td>${p.ponto_faixa_nominal}</td>
+                            <td>Unidade:</td><td>${p.ponto_unidade}</td>
+                            <td>Tolerância Admissível:</td><td>${p.ponto_tolerancia_admissivel}</td>
+                            
+                            <!-- Último Certificado -->
+                            <td>Último Certificado:</td>
+                            <td>
+                                ${p.ultimo_certificado === 'reprovado' ? 
+                                    '<span class="badge bg-danger">Reprovado</span>' :
+                                    p.ultimo_certificado === 'aprovado' ? 
+                                        '<span class="badge bg-success">Aprovado</span>' :
+                                        '<span class="badge bg-warning">Pendente</span>'
+                                }
+                            </td>
+                            <td>
+                                 ${d.status_calibracao === 'recebido' && p.analise_certificado === null && p.status_ponto_calibracao == 'ativo' ? 
+                                    `Calibração: <button class="btn badge btn-danger btn-sm" onclick="analisarCalibracao('${p.ultimo_envio_pk}','${d.tag}','${p.ponto_pk}')">Analisar</button>` :
+                                    ``
+                                }
+                            </td>
+                            <td><button class="btn badge btn-secondary btn-sm" onclick="abrirHistoricoModal('${d.tag}','${p.ponto_pk}','${p.ponto_descricao}')">Histórico</button></td>
+                            <td>
+                                Status:
+                                 ${p.status_ponto_calibracao == 'ativo' ? 
+                                    ' <span class="badge bg-success">Ativo</span>' :
+                                    ' <span class="badge bg-danger">Inativo</span>'
+                                }
+                            </td>
+                        </tr>
+                    `
+                    )
+                    .join('')}
+            </table>
+        `;
+    }
+    
 });
