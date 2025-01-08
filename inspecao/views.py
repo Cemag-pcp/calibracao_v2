@@ -142,8 +142,11 @@ def analisar_view(request):
                 except ValueError:
                     return JsonResponse({'status': 'error', 'message': 'Formato de data inválido. Use YYYY-MM-DD.'}, status=400)
 
-                incerteza_analise = float(data.get('incertezaAnalise', 0))  # Valor padrão como 0
-                tendencia_analise = float(data.get('tendenciaAnalise', 0))  # Valor padrão como 0
+                print(data.get('incertezaAnalise'))
+                print(data.get('tendenciaAnalise'))
+
+                incerteza_analise = float(data.get('incertezaAnalise'))  # Valor padrão como 0
+                tendencia_analise = float(data.get('tendenciaAnalise'))  # Valor padrão como 0
                 resultado_analise = data.get('resultadoAnalise')
                 responsavel_analise = data.get('responsavelAnalise')
 
@@ -192,10 +195,48 @@ def info_instrumento(request,pk_ponto,id_envio):
     envio_object = get_object_or_404(Envio, pk=id_envio)
     certificado = envio_object.pdf
 
+    print(certificado)
+
     info = [{
         'faixa_nominal':faixa_nominal,
         'tol_admissivel':tol_admissivel if tol_admissivel else None,
         'certificado':certificado
+    }]
+
+    return JsonResponse({'info':info})
+
+def info_instrumento_ultima_analise(request,pk_ponto,id_envio):
+
+    ponto_calibracao_object = get_object_or_404(PontoCalibracao, pk=pk_ponto)
+    
+    faixa_nominal = ponto_calibracao_object.faixa_nominal
+    tol_admissivel = ponto_calibracao_object.tolerancia_admissivel
+
+    envio = Envio.objects.filter(ponto_calibracao_id=pk_ponto).order_by('-id').first()
+    # envio = get_object_or_404(Envio, ponto_calibracao_id=pk_ponto)
+
+    print(envio)
+
+    # Obtém a análise de certificado relacionada ao envio
+    analise_certificado = AnaliseCertificado.objects.filter(envio=envio).order_by('-id').first()
+
+    if not analise_certificado:
+        envio_anterior = Envio.objects.filter(ponto_calibracao_id=pk_ponto).order_by('-id')  # Ordene pela coluna desejada
+        penultimo_envio = envio_anterior[1]
+        analise_certificado = AnaliseCertificado.objects.filter(envio=penultimo_envio).first()
+
+    info = [{
+        'ponto_calibracao': {
+            'faixa_nominal':faixa_nominal,
+            'tol_admissivel':tol_admissivel if tol_admissivel else None,
+        },
+        'analise_certificado': {
+            'analise_certificado': analise_certificado.analise_certificado,
+            'incerteza': analise_certificado.incerteza,
+            'tendencia': analise_certificado.tendencia,
+            'responsavel_analise': analise_certificado.responsavel_analise.id if analise_certificado.responsavel_analise else None,
+            'data_analise': analise_certificado.data_analise,
+        }
     }]
 
     return JsonResponse({'info':info})

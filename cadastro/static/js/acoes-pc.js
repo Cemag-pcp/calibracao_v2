@@ -87,6 +87,16 @@ function analisarCalibracao(idEnvio,tag,pontoCalibracao) {
 
 }
 
+function ultimaAnalise(idEnvio,tag,pontoCalibracao) {
+
+    document.getElementById('modal-title-ultima-analise').textContent = `Analisar: ${tag}`;
+    document.getElementById('id-instrumento-ultima-analise').value = idEnvio;
+    document.getElementById('formUltimaAnalise').reset();
+
+    buscarUltimaAnaliseInstrumento(idEnvio,pontoCalibracao)
+
+}
+
 document.addEventListener('DOMContentLoaded', () => {
 
     // Seleciona o formulário
@@ -382,10 +392,55 @@ function buscarInfoInstrumento(idEnvio, pontoCalibracao) {
         });
 }
 
-function abrirModalEscolherResponsavel(tag) {
+function buscarUltimaAnaliseInstrumento(idEnvio, pontoCalibracao) {
+    fetch(`/instrumento/info/ultima_analise/${pontoCalibracao}/${idEnvio}/`)
+        .then(response => response.json())
+        .then(data => {
+            const info = data.info[0];
+            const analise = info.analise_certificado;
+
+            console.log(analise.tendencia)
+
+            // Preenchendo os campos do modal
+            document.getElementById('id-instrumento-ultima-analise').value = pontoCalibracao; // Ou outro identificador relevante
+            document.getElementById('incertezaUltimaAnalise').value = analise.incerteza;
+            document.getElementById('tendeciaUltimaAnalise').value = analise.tendencia;
+            document.getElementById('dataUltimaAnalise').value = analise.data_analise;
+            document.getElementById('resultadoUltimaAnalise').value = analise.analise_certificado; // Supondo que este valor seja "aprovado" ou "reprovado"
+
+            // Preenchendo as informações do instrumento
+            document.getElementById('faixaNominalUltimaAnalise').textContent = info.ponto_calibracao.faixa_nominal;
+            document.getElementById('toleranciaAdmissivelUltimaAnalise').textContent = info.ponto_calibracao.tol_admissivel;
+
+            const modalElement = document.getElementById('modal-ultima-analise');
+            const modal = new bootstrap.Modal(modalElement);
+            // Exibe o modal
+            modal.show();
+        })
+        .catch(error => {
+            console.error('Erro ao carregar as informações do instrumento:', error);
+            alert('Erro ao carregar as informações do instrumento.');
+        });
+}
+
+function abrirModalEscolherResponsavel(tag, responsavel_id, dataEntrega) {
     document.getElementById('modal-title-responsavel').textContent = `Escolher responsável para: ${tag}`;
     document.getElementById('tag-instrumento-responsavel').value = tag;
     document.getElementById('formResponsavel').reset();
+    const selectResponsavel = document.getElementById("nome-responsavel");
+    const selectDataEntrega = document.getElementById("dataEntrega");
+
+    console.log(dataEntrega);
+
+    if (responsavel_id !== null) {
+        selectResponsavel.value = responsavel_id;
+        selectResponsavel.disabled = true;
+        selectDataEntrega.value = dataEntrega;
+        selectDataEntrega.disabled = true;
+    } else {
+        selectResponsavel.disabled = false;
+        selectDataEntrega.disabled = false;
+    }
 
     const modal = new bootstrap.Modal(document.getElementById('modal-responsavel'));
     modal.show();

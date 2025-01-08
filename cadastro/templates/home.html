@@ -27,6 +27,7 @@
             <th>Última Calibração</th>
             <th>Próxima Calibração</th>
             <th>Status Calibração</th>
+            <th>Status Geral</th>
             <th>Responsável</th>
             <th>Ação</th>
         </tr>
@@ -34,7 +35,7 @@
 </table>
 
 <!-- Modal para buscar qrcode -->
-<div id="modal-qrcode" class="modal fade" tabindex="-1" aria-hidden="true">
+<div id="modal-qrcode" class="modal fade" data-bs-backdrop="static" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
@@ -69,7 +70,7 @@
 </div>
 
 <!-- Modal para enviar p/ calibração -->
-<div id="modal-enviar" class="modal fade" tabindex="-1" aria-hidden="true">
+<div id="modal-enviar" class="modal fade" data-bs-backdrop="static" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
@@ -149,7 +150,7 @@
 </div>
 
 <!-- Modal de recebimento de calibração -->
-<div id="modal-recebimento" class="modal fade" tabindex="-1" aria-hidden="true">
+<div id="modal-recebimento" class="modal fade" data-bs-backdrop="static" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
@@ -209,7 +210,7 @@
 </div>
 
 <!-- Modal de analise da calibração -->
-<div id="modal-analise" class="modal fade" tabindex="-1" aria-hidden="true">
+<div id="modal-analise" class="modal fade" data-bs-backdrop="static" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
@@ -229,8 +230,8 @@
                         </div>
                         <div class="col-sm-6">
                             <!-- Tendência -->
-                            <label for="tendeciaAnalise">Tendência</label>
-                            <input class="form-control" type="number" name="tendeciaAnalise" id="tendeciaAnalise" step="0.1" required>
+                            <label for="tendenciaAnalise">Tendência</label>
+                            <input class="form-control" type="number" name="tendenciaAnalise" id="tendenciaAnalise" step="0.1" required>
                         </div>
                     </div>
 
@@ -293,8 +294,76 @@
     </div>
 </div>
 
+<div class="modal fade" id="modal-ultima-analise" data-bs-backdrop="static" tabindex="-1" aria-labelledby="modal-title-ultima-analise" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title-ultima-analise" id="modal-title-ultima-analise">Modal Title</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="formUltimaAnalise">
+                    
+                    <input type="hidden" name="id-instrumento-ultima-analise" id="id-instrumento-ultima-analise">
+                    
+                    <div class="row mb-3">
+                        <div class="col-sm-6">
+                            <!-- Incerteza -->
+                            <label for="incertezaUltimaAnalise">Incerteza</label>
+                            <input class="form-control" type="number" name="incertezaUltimaAnalise" id="incertezaUltimaAnalise" step="0.1" disabled>
+                        </div>
+                        <div class="col-sm-6">
+                            <!-- Tendência -->
+                            <label for="tendeciaUltimaAnalise">Tendência</label>
+                            <input class="form-control" type="number" name="tendeciaUltimaAnalise" id="tendeciaUltimaAnalise" step="0.1" disabled>
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-sm-6">
+                            <!-- Data da análise -->
+                            <label for="dataUltimaAnalise">Data da análise</label>
+                            <input class="form-control" type="date" name="dataUltimaAnalise" id="dataUltimaAnalise" disabled>
+                        </div>
+                        <div class="col-sm-6">
+                    
+                            <!-- Análise final -->
+                            <label for="resultadoUltimaAnalise">Resultado final</label>
+                            <select class="form-control" name="resultadoUltimaAnalise" id="resultadoUltimaAnalise" disabled>
+                                <option value="">-------</option>
+                                <option value="aprovado">Aprovado</option>
+                                <option value="reprovado">Reprovado</option>
+                            </select>
+                        </div>
+                    </div>
+                    <hr>
+                    <!-- Informações do instrumento -->
+                    <div class="text-center mb-3">
+                        <h1>Informações sobre o instrumento</h1>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-sm-6">
+                            <p><strong>Faixa Nominal:</strong> <span id="faixaNominalUltimaAnalise"></span></p>
+                        </div>
+                        <div class="col-sm-6">
+                            <p><strong>Tolerância Admissível:</strong> <span id="toleranciaAdmissivelUltimaAnalise"></span></p>
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-sm-12">
+                            <strong>Certificado:</strong>
+                            <a href="#" id="certificadoAtualUltimaAnalise" target="_blank" rel="noopener noreferrer">Visualizar Certificado</a>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+
 <!-- Modal p/ escolher responsável -->
-<div id="modal-responsavel" class="modal fade" tabindex="-1" aria-hidden="true">
+<div id="modal-responsavel" class="modal fade" data-bs-backdrop="static" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">

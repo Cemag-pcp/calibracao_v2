@@ -56,14 +56,27 @@ $(document).ready(function () {
                     return data;
                 },
             },
+            {
+                data: 'status_calibracao_string',
+                title: 'Status Geral da Calibração',
+                render: function (data, type, row) {
+                    const ultimoEnvioList = row.pontos_calibracao.map(ponto => ponto.ultimo_certificado);
+                    const contemAprovado = ultimoEnvioList.some(aprovado => aprovado === "aprovado" || aprovado === null);
+
+                    const aprovado = contemAprovado ? '<i class="fa-solid fa-circle fa-circle-check"  style="color:rgb(0, 124, 37);"></i>' : '<i class="fa-solid fa-circle-xmark" style="color: #ff0000;"></i>'
+
+                    return aprovado;
+                },
+            },
             {   
                 data: 'responsavel',
                 orderable: true,
                 render: function(data, type, row) {
-                    if (row.responsavel === null) {
-                        return `<button class="btn badge btn-secondary btn-sm" onclick="abrirModalEscolherResponsavel('${row.tag}')">Escolher responsável</button>`;
+                    console.log(row)
+                    if (row.responsavel.matriculaNome === null) {
+                        return `<button class="btn badge btn-secondary btn-sm" onclick="abrirModalEscolherResponsavel('${row.tag}','${row.responsavel.id}','${row.responsavel.dataEntrega}')">Escolher responsável</button>`;
                     } else {
-                        return `<span class="badge bg-primary">${row.responsavel}</span>`;
+                        return `<span class="btn badge btn-primary" onclick="abrirModalEscolherResponsavel('${row.tag}','${row.responsavel.id}','${row.responsavel.dataEntrega}')">${row.responsavel.matriculaNome}</span>`;
                     }
                 }
             },
@@ -81,8 +94,6 @@ $(document).ready(function () {
                         <button class="btn badge btn-primary btn-sm" onclick="abrirQrCodeModal('${row.tag}')">Ver QR Code</button>
                         <button class="btn badge btn-secondary btn-sm" onclick="abrirHistoricoModal('${row.tag}','${row.ponto_pk}')">Histórico</button>
                     `; 
-
-                    console.log(row)
 
                     if (row.status_calibracao === 'enviado') {
                         buttons += `<button class="btn badge btn-success btn-sm" onclick="receberCalibracao('${JSON.stringify(ultimoEnvioList)}','${row.tag}')">Receber</button>`;
@@ -115,45 +126,51 @@ $(document).ready(function () {
 
     function format(d) {
         return `
-            <table cellpadding="5" cellspacing="0" border="0" style="padding-left:50px;">
+            <div class="card-container">
+                <div class="row">
                 ${d.pontos_calibracao
                     .map(
                         (p) => `
-                        <tr>
-                            <td>Descrição:</td><td>${p.ponto_descricao}</td>
-                            <td>Faixa Nominal:</td><td>${p.ponto_faixa_nominal}</td>
-                            <td>Unidade:</td><td>${p.ponto_unidade}</td>
-                            <td>Tolerância Admissível:</td><td>${p.ponto_tolerancia_admissivel}</td>
-                            
-                            <!-- Último Certificado -->
-                            <td>Último Certificado:</td>
-                            <td>
-                                ${p.ultimo_certificado === 'reprovado' ? 
-                                    '<span class="badge bg-danger">Reprovado</span>' :
-                                    p.ultimo_certificado === 'aprovado' ? 
-                                        '<span class="badge bg-success">Aprovado</span>' :
-                                        '<span class="badge bg-warning">Pendente</span>'
-                                }
-                            </td>
-                            <td>
-                                 ${d.status_calibracao === 'recebido' && p.analise_certificado === null && p.status_ponto_calibracao == 'ativo' ? 
-                                    `Calibração: <button class="btn badge btn-danger btn-sm" onclick="analisarCalibracao('${p.ultimo_envio_pk}','${d.tag}','${p.ponto_pk}')">Analisar</button>` :
-                                    ``
-                                }
-                            </td>
-                            <td><button class="btn badge btn-secondary btn-sm" onclick="abrirHistoricoModal('${d.tag}','${p.ponto_pk}','${p.ponto_descricao}')">Histórico</button></td>
-                            <td>
-                                Status:
-                                 ${p.status_ponto_calibracao == 'ativo' ? 
-                                    ' <span class="badge bg-success">Ativo</span>' :
-                                    ' <span class="badge bg-danger">Inativo</span>'
-                                }
-                            </td>
-                        </tr>
+                            <div class="col-sm-3">
+                                <div class="card">
+                                    <div class="card-body">
+                                        <div class="d-flex w-100 justify-content-between">
+                                            <h5 class="mb-1">${p.ponto_descricao}</h5>
+                                            <small>
+                                                ${p.status_ponto_calibracao == 'ativo' ? 
+                                                ' <span class="badge bg-success">Ativo</span>' :
+                                                ' <span class="badge bg-danger">Inativo</span>'}
+                                            </small>
+                                        </div>
+                                        <div class="mb-2"><strong>Faixa Nominal:</strong> ${p.ponto_faixa_nominal}</div>
+                                        <div class="mb-2"><strong>Unidade:</strong> ${p.ponto_unidade}</div>
+                                        <div class="mb-2"><strong>Tolerância Admissível:</strong> ${p.ponto_tolerancia_admissivel}</div>
+                                        
+                                        <!-- Último Certificado -->
+                                        <div class="mb-2"><strong>Último Certificado:</strong> 
+                                            ${p.ultimo_certificado === 'reprovado' ? 
+                                                '<span class="badge bg-danger">Reprovado</span>' :
+                                                p.ultimo_certificado === 'aprovado' ? 
+                                                    '<span class="badge bg-success">Aprovado</span>' :
+                                                    '<span class="badge bg-warning">Pendente</span>'
+                                            }
+                                        </div>
+            
+                                        <div class="mb-2">
+                                            ${d.status_calibracao === 'recebido' && p.analise_certificado === null && p.status_ponto_calibracao == 'ativo' ? 
+                                                `<strong>Calibração:</strong> <button class="btn badge btn-danger btn-sm" onclick="analisarCalibracao('${p.ultimo_envio_pk}','${d.tag}','${p.ponto_pk}')">Analisar</button>` :
+                                                ``
+                                            }
+                                        </div>
+                                        <div><button class="btn badge btn-secondary btn-sm" onclick="ultimaAnalise('${p.ultimo_envio_pk}','${d.tag}','${p.ponto_pk}')">Última análise</button></div>
+                                    </div>
+                                </div>
+                            </div>
                     `
                     )
                     .join('')}
-            </table>
+                </div>
+            </div>
         `;
     }
     

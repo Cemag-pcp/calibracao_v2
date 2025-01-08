@@ -60,9 +60,6 @@ class Envio(models.Model):
 
             self.instrumento.save()  # Salva a alteração no modelo InfoInstrumento
 
-    def __str__(self):
-        return f'{self.instrumento.tipo_instrumento.nome} - {self.status}'
-
     class Meta:
         verbose_name = "Envio"
         verbose_name_plural = "Envios"

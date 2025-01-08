@@ -102,7 +102,7 @@ def instrumentos_data(request):
                     'status_calibracao_string': status_calibracao,
                     'status_calibracao': ultimo_envio.status if ultimo_envio else None,
                     'tempo_calibracao': instrumento.tempo_calibracao,
-                    'responsavel': responsavel,
+                    'responsavel': {'id': designacao.responsavel.id, 'matriculaNome': responsavel, 'dataEntrega': designacao.data_entrega_funcionario},
                     'pontos_calibracao': []
                 }
 

@@ -8,6 +8,7 @@ urlpatterns = [
     path('analisar-calibracao/', views.analisar_view, name='analisar_view'),
 
     path('instrumento/info/<int:pk_ponto>/<int:id_envio>/', views.info_instrumento, name='info_instrumento'),
+    path('instrumento/info/ultima_analise/<int:pk_ponto>/<int:id_envio>/', views.info_instrumento_ultima_analise, name='info_instrumento'),
 
 
 ]
