@@ -33,10 +33,10 @@ SECRET_KEY = 'django-insecure-4%#l3ol9b$veuy-f-1-c8h52e=av!2mpwd40v#6vmckb7_n3al
 DEBUG = True
 
 CSRF_TRUSTED_ORIGINS = [
-    'https://ae0d-177-19-132-134.ngrok-free.app'
+    'https://8dad-177-19-132-134.ngrok-free.app'
 ]
 
-ALLOWED_HOSTS = ['ae0d-177-19-132-134.ngrok-free.app', '127.0.0.1']
+ALLOWED_HOSTS = ['8dad-177-19-132-134.ngrok-free.app', '127.0.0.1']
 
 # Application definition
 
@@ -49,7 +49,8 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
 
     'cadastro',
-    'inspecao'
+    'inspecao',
+    'ficha'
 ]
 
 MIDDLEWARE = [

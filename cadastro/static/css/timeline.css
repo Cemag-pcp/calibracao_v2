@@ -63,3 +63,15 @@
 .timeline-event-body {
     font-size: 0.9rem;
 }
+
+#ficha_link {
+    cursor: pointer;
+    width: 100%;
+    height: auto;
+    filter: brightness(80%); /* Reduz o brilho para escurecer a imagem */
+    transition: filter 0.3s; /* Adiciona uma transição suave */
+}
+
+#ficha_link:hover {
+    filter: brightness(90%); /* Escurece um pouco menos ao passar o mouse */
+}

@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block links %}
+    <link href="{% static 'css/timeline.css' %}" rel="stylesheet">
+{% endblock %}
+
+{% block content %}
+
+<div class="container">
+    <div class="row justify-content-center" style="margin-bottom: 50px;">
+        <div class="col-12 col-sm-12 col-md-8 col-lg-8 col-xl-5 text-center">
+            <h1 style="font-weight: 700;"><label for="">Termo de responsabilidade calibração</label></h1>
+            <p class="fw-medium" style="color: #6e6e77;">Escolha o funcionário que deseja emitir a ficha</p>
+            <div class="input-group">
+                <input class="form-control custom-select custom-select-sm fw-semibold" list="encodings" id="filterInput" type="text" placeholder="Pesquisar ficha do funcionário..." aria-label="Pesquisar ficha do funcionário" aria-describedby="filtrar_funcionario">
+                <datalist id="encodings">
+                    {% for funcionario in funcionarios %}
+                        <option value="{{ funcionario.nome }}" data-id="{{ funcionario.id }}">{{ funcionario.nome }}</option>
+                    {% endfor %}
+                </datalist>
+                <button id="filtrar_funcionario" class="input-group-text btn btn-light border" type="button">
+                    <i class="fa-solid fa-download"></i>
+                    <span class="spinner-border spinner-border-sm d-none" aria-hidden="true"></span>
+                    <span class="visually-hidden" role="status">Loading...</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+    <script src="{% static 'js/filtrar-ficha-funcionarios.js' %}"></script>
+    <script>
+        document.getElementById('filtrar_funcionario').addEventListener('click', function() {
+            var input = document.getElementById('filterInput');
+            var datalist = document.getElementById('encodings').options;
+            var selectedId;
+    
+            for (var i = 0; i < datalist.length; i++) {
+                if (datalist[i].value === input.value) {
+                    selectedId = datalist[i].getAttribute('data-id');
+                    break;
+                }
+            }
+    
+            if (selectedId) {
+                // Realiza a requisição GET via fetch
+                fetch(`/gerar_ficha/${selectedId}`)
+                    .then(response => response.blob())
+                    .then(blob => {
+                        // Cria um link para o download do arquivo
+                        const link = document.createElement('a');
+                        link.href = URL.createObjectURL(blob);
+                        link.download = `Termo de Responsabilidade Equipamentos de Medição_Atualizado.xlsx`;  // Nome do arquivo para o download
+                        link.click();  // Simula o clique para iniciar o download
+
+                        alert('Ficha gerada com sucesso!');
+                    })
+                    .catch(error => {
+                        console.error('Erro ao gerar a ficha:', error);
+                        alert('Funcionário não encontrado.');
+                    });
+            } else {
+                alert('Funcionário não encontrado. Por favor, selecione uma opção válida.');
+            }
+        });
+    </script>
+{% endblock %}

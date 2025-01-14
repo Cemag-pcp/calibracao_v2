@@ -2,13 +2,18 @@ from django.shortcuts import render, get_object_or_404
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.http import JsonResponse
 from django.db.models import Q
+from django.db import transaction
+from django.core.files.base import ContentFile
 
 from inspecao.models import Envio, Laboratorio, AnaliseCertificado
+from ficha.models import AssinaturaInstrumento
 from .models import InfoInstrumento, HistoricoInstrumento, Funcionario, DesignarInstrumento, Operadores, PontoCalibracao
 from cadastro.utils import *
 
 from datetime import datetime
 import json
+import base64
+import uuid
 
 def instrumento_detail(request, pk):
     instrumento = get_object_or_404(InfoInstrumento, pk=pk)
@@ -85,9 +90,13 @@ def instrumentos_data(request):
             designacao = DesignarInstrumento.objects.filter(instrumento_escolhido=instrumento).first()
 
             if designacao and designacao.responsavel:
+                responsavel_id = designacao.responsavel.id
                 responsavel = f"{designacao.responsavel.matricula} - {designacao.responsavel.nome}"
+                responsavel_data_entrega = designacao.data_entrega_funcionario
             else:
                 responsavel = None
+                responsavel_id = None
+                responsavel_data_entrega = None
 
             # Agrupar os dados por TAG
             if instrumento.tag not in instrumentos_detalhes:
@@ -102,7 +111,7 @@ def instrumentos_data(request):
                     'status_calibracao_string': status_calibracao,
                     'status_calibracao': ultimo_envio.status if ultimo_envio else None,
                     'tempo_calibracao': instrumento.tempo_calibracao,
-                    'responsavel': {'id': designacao.responsavel.id, 'matriculaNome': responsavel, 'dataEntrega': designacao.data_entrega_funcionario},
+                    'responsavel': {'id': responsavel_id, 'matriculaNome': responsavel, 'dataEntrega': responsavel_data_entrega},
                     'pontos_calibracao': []
                 }
 
@@ -172,10 +181,21 @@ def escolher_responsavel(request):
         try:
             # Parse do corpo da requisição
             data = json.loads(request.body)
+
+            signature_base64 = data.get('signature', '')
+
+            format, imgstr = signature_base64.split(';base64,') 
+            ext = format.split('/')[-1]  # Extensão do arquivo, como 'png', 'jpg', etc.
             
-            link_ficha=data.get('linkFicha')
-            
+            # Gerar um UUID para o nome do arquivo
+            file_name = f"{uuid.uuid4()}.{ext}"
+
+            # Criar o arquivo a partir da string base64
+            signature_file = ContentFile(base64.b64decode(imgstr), name=file_name)
+                
             data_entrega_str = data.get('dataEntrega')
+            motivo_responsavel = data.get('motivo-responsavel')
+
             if not data_entrega_str:
                 return JsonResponse({'status': 'error', 'message': 'Data de análise não fornecida'}, status=400)
             try:
@@ -193,12 +213,11 @@ def escolher_responsavel(request):
 
             if designacao:
                 # Atualiza o responsável existente
-                descricao = f"Mudando responsável de: {designacao.responsavel.matricula} - {designacao.responsavel.nome} para: {funcionario_object.matricula} - {funcionario_object.nome}\nLink da ficha assinada: {link_ficha if link_ficha else 'Pendente'}"
+                descricao = f"Mudando responsável de: {designacao.responsavel.matricula} - {designacao.responsavel.nome} para: {funcionario_object.matricula} - {funcionario_object.nome}\nLink da ficha assinada:"
                 registrar_mudanca_responsavel(instrumento_object,descricao=descricao)
                 
                 designacao.responsavel = funcionario_object
                 designacao.data_entrega_funcionario=data_entrega
-                designacao.pdf=link_ficha
                 designacao.save()
 
             else:
@@ -206,13 +225,92 @@ def escolher_responsavel(request):
                 descricao = f"Atribuindo a responsabilidade para: {funcionario_object.matricula} - {funcionario_object.nome}"
                 registrar_primeiro_responsavel(instrumento_object,descricao=descricao)
 
-                DesignarInstrumento.objects.create(
+                designacao = DesignarInstrumento.objects.create(
                     instrumento_escolhido=instrumento_object,
                     responsavel=funcionario_object,
                     data_entrega_funcionario=data_entrega
                 )
+            
+            AssinaturaInstrumento.objects.create(
+                instrumento=instrumento_object,
+                assinante=funcionario_object,
+                data_entrega=data_entrega,
+                foto_assinatura=signature_file,
+                motivo=motivo_responsavel
+            )
 
             return JsonResponse({'status': 'success',}, status=200)
+
+        except json.JSONDecodeError:
+            return JsonResponse({'status': 'error', 'message': 'Erro ao processar o JSON enviado'}, status=400)
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+    return JsonResponse({'status': 'error', 'message': 'Método não permitido'}, status=405)
+
+def editar_responsavel(request):
+
+    if request.method == 'POST':
+        
+        try:
+            with transaction.atomic():
+                # Parse do corpo da requisição
+                data = json.loads(request.body)
+
+                nome_novo_responsavel = data.get('nome-editar-responsavel')
+                motivo_editar_responsavel = data.get('motivo-editar-responsavel')
+
+                if nome_novo_responsavel != '':
+                    signature_base64 = data.get('signature', '')
+
+                    format, imgstr = signature_base64.split(';base64,') 
+                    ext = format.split('/')[-1]  # Extensão do arquivo, como 'png', 'jpg', etc.
+                    
+                    # Gerar um UUID para o nome do arquivo
+                    file_name = f"{uuid.uuid4()}.{ext}"
+
+                    # Criar o arquivo a partir da string base64
+                    signature_file = ContentFile(base64.b64decode(imgstr), name=file_name)
+                    
+                    data_entrega_str = data.get('dataEntregaEdicao')
+                    if not data_entrega_str:
+                        return JsonResponse({'status': 'error', 'message': 'Data de análise não fornecida'}, status=400)
+                    try:
+                        # Converte a string em objeto datetime.date
+                        data_entrega = datetime.strptime(data_entrega_str, '%Y-%m-%d').date()
+                    except ValueError:
+                        return JsonResponse({'status': 'error', 'message': 'Formato de data inválido. Use YYYY-MM-DD.'}, status=400)
+
+                    # Obtém os objetos relacionados
+                    funcionario_object = get_object_or_404(Funcionario, pk=data.get('nome-editar-responsavel'))
+                instrumento_object = get_object_or_404(InfoInstrumento, tag=data.get('tag-instrumento-responsavel-editar'))
+
+                # Verifica se o instrumento já possui um responsável
+                designacao = DesignarInstrumento.objects.filter(instrumento_escolhido=instrumento_object).first()
+
+                if designacao and nome_novo_responsavel != '':
+                    # Atualiza o responsável existente
+                    descricao = f"Mudando responsável de: {designacao.responsavel.matricula} - {designacao.responsavel.nome} para: {funcionario_object.matricula} - {funcionario_object.nome}\nLink da ficha assinada:"
+                    registrar_mudanca_responsavel(instrumento_object,descricao=descricao)
+                    
+                    designacao.responsavel = funcionario_object
+                    designacao.data_entrega_funcionario=data_entrega
+                    designacao.save()
+                    AssinaturaInstrumento.objects.create(
+                        instrumento=instrumento_object,
+                        assinante=funcionario_object,
+                        foto_assinatura=signature_file,
+                        motivo=motivo_editar_responsavel
+                    )
+                else:
+                    # Atualiza o responsável existente
+                    descricao = f"Mudando responsável de: {designacao.responsavel.matricula} - {designacao.responsavel.nome} para: Nenhum Responsável \nLink da ficha assinada:"
+                    registrar_mudanca_responsavel(instrumento_object,descricao=descricao)
+                    instrumento_object.status_instrumento = 'ativo'
+                    instrumento_object.save()
+                    designacao.delete()
+
+                return JsonResponse({'status': 'success',}, status=200)
 
         except json.JSONDecodeError:
             return JsonResponse({'status': 'error', 'message': 'Erro ao processar o JSON enviado'}, status=400)

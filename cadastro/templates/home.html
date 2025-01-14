@@ -5,18 +5,8 @@
     <link href="{% static 'css/timeline.css' %}" rel="stylesheet">
 {% endblock %}
 
-<style>
-    td.details-control {
-        background: url('https://www.datatables.net/examples/resources/details_open.png') no-repeat center center;
-        cursor: pointer;
-    }
-    tr.shown td.details-control {
-        background: url('https://www.datatables.net/examples/resources/details_close.png') no-repeat center center;
-    }
-</style>
-
 {% block content %}
-<table id="instrumentos-table" class="display">
+<table id="instrumentos-table" class="display table table-striped table-bordered">
     <thead>
         <tr>
             <th></th>
@@ -372,10 +362,17 @@
             </div>
             <div class="modal-body" id="modal-body-responsavel">
                 <form id="formResponsavel">
-                    
                     <input type="hidden" name="tag-instrumento-responsavel" id="tag-instrumento-responsavel">
-                    
                     <div class="row mb-3">
+                        <div class="col-sm-6 mb-3">
+                            <label for="dataEntrega">Motivo</label>
+                            <select class="form-control" name="motivo-responsavel" id="motivo-responsavel" required>
+                                <option value="">-------</option>
+                                <option value="Primeira Entrega">Primeira Entrega</option>
+                                <option value="Substituição">Substituição</option>
+                                <option value="Devolução">Devolução</option>
+                            </select>
+                        </div>
                         <div class="col-sm-6">
                             <!-- Nome do responsável -->
                             <label for="nome-responsavel">Escolha um responsável</label>
@@ -392,20 +389,92 @@
                             <input class="form-control" type="date" name="dataEntrega" id="dataEntrega" required>
                         </div>
                     </div>
-                    <div class="row mb-3">
-                        <div class="col-sm-6">
-                            <!-- Link da ficha assinada -->
-                            <label for="linkFicha" class="form-label">Link da ficha</label>
-                            <input type="url" class="form-control" name="linkFicha" id="linkFicha" placeholder="Insira o link da ficha assinada, se disponível.">
+                    <div class="row mb-3" id="signature">
+                        <label for="signature-canvas">Assinatura</label>
+                        <canvas id="signature-canvas" style="border: 1px solid #000; width: 90%; height: 200px; margin: 0 auto;"></canvas>
+                    </div>                  
+                    <!-- Botão de Envio -->
+                    <div class="modal-footer justify-content-between">
+                        <button type="button" class="btn btn-secondary" id="clear-signature">Limpar Assinatura</button>
+                        <div>
+                            <button type="submit" class="btn btn-success">Enviar</button>
                         </div>
                     </div>
+                </form>
+                <div id="form-visualizar-ficha">
+                    <input type="hidden" name="tag-instrumento-responsavel" id="tag-instrumento-responsavel">
+                    <div class="row mb-3">
+                        <div class="col-sm-6  mb-3">
+                            <!-- Nome do responsável -->
+                            <label for="nome-responsavel">Responsável</label>
+                            <select class="form-control" name="nome-responsavel-visualizar-ficha" id="nome-responsavel-visualizar-ficha" disabled>
+                                <option value="">-------</option>
+                                {% for funcionario in funcionarios %}
+                                <option value="{{funcionario.id}}">{{funcionario.matricula}} - {{funcionario.nome}}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-sm-6  mb-3">
+                            <!-- Data de entrega -->
+                            <label for="dataEntrega">Data da entrega</label>
+                            <input class="form-control" type="date" name="dataEntrega-visualizar-ficha" id="dataEntrega-visualizar-ficha" disabled>
+                        </div>
+                    </div>    
+                    <!-- Data de entrega -->
+                    <label>Ficha</label>
+                    <img id="ficha_link" src="/static/img/termo_de_responsabilidade.png" alt="Termo de Responsabilidade">           
+                </div>  
+            </div>
+        </div>
+    </div>
+</div>
 
-                    <!-- Botão de Envio -->
-                    <div class="modal-footer">
+<div id="modal-alterar-responsavel" class="modal fade" data-bs-backdrop="static" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modal-title-alterar-responsavel">Alterar Responsável</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="form-editar-responsavel">
+                <div class="modal-body" id="modal-body-alterar-responsavel">
+                    <input type="hidden" name="tag-instrumento-responsavel-editar" id="tag-instrumento-responsavel-editar">
+                        <div class="row">
+                            <div class="col-sm-6 mb-3">
+                                <label for="dataEntrega">Motivo</label>
+                                <select class="form-control" name="motivo-editar-responsavel" id="motivo-editar-responsavel" required>
+                                    <option value="">-------</option>
+                                    <option value="Primeira Entrega">Primeira Entrega</option>
+                                    <option value="Substituição">Substituição</option>
+                                    <option value="Devolução">Devolução</option>
+                                </select>
+                            </div>
+                            <div class="col-sm-6 mb-3" id="col-nome-editar-responsavel">
+                                <label for="nome-responsavel">Responsável</label>
+                                <select class="form-control" name="nome-editar-responsavel" id="nome-editar-responsavel">
+                                    <option value="">Não designar a nenhum funcionário</option>
+                                    {% for funcionario in funcionarios %}
+                                    <option value="{{funcionario.id}}">{{funcionario.matricula}} - {{funcionario.nome}}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-sm-6 mb-3 hide-row">
+                                <label for="dataEntrega">Data da entrega</label>
+                                <input class="form-control" type="date" name="dataEntregaEdicao" id="dataEntregaEdicao">
+                            </div>
+                        </div>
+                        <div class="row mb-3 hide-row" id="signature-edicao">
+                            <label for="signature-canvas-edicao">Assinatura</label>
+                            <canvas id="signature-canvas-edicao" style="border: 1px solid #000; width: 90%; height: 200px; margin: 0 auto;"></canvas>
+                        </div>   
+                </div>
+                <div class="modal-footer justify-content-between">
+                    <button type="button" class="btn btn-secondary hide-row" id="clear-signature-edicao">Limpar Assinatura</button>
+                    <div>
                         <button type="submit" class="btn btn-success">Enviar</button>
                     </div>
-                </form>
-            </div>
+                </div>
+            </form>
         </div>
     </div>
 </div>
@@ -413,7 +482,8 @@
 {% endblock %}
 
 {% block scripts %}
+    <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.0.0/dist/signature_pad.umd.min.js"></script>
     <script src="{% static 'js/data-table-pc.js' %}"></script>
     <script src="{% static 'js/acoes-pc.js' %}"></script>
-
+    <script src="{% static 'js/signature.js' %}"></script>
 {% endblock %}

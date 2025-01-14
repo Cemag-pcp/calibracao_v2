@@ -11,5 +11,6 @@ urlpatterns = [
     path('instrumento/historico/<str:tag>/<int:pk_ponto>/', views.historico_view, name='historico_view'),
 
     path('escolher-responsavel/', views.escolher_responsavel, name='escolher_responsavel'),
+    path('editar-responsavel/', views.editar_responsavel, name='editar_responsavel'),
 
 ]

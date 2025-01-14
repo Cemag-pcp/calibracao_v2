@@ -72,10 +72,18 @@
                         <div class="collapse" id="collapseApontamento" aria-labelledby="headingOne"
                             data-bs-parent="#sidenavAccordion">
                             <nav class="sb-sidenav-menu-nested nav">
-                                <a class="nav-link" href="#">Cadastrar peça</a>
-                                <a class="nav-link" href="#">Visão geral</a>
+                                <a class="nav-link" href="#">Cadastrar Instrumento</a>
+                                <a class="nav-link" href="/home/">Visão Geral</a>
                             </nav>
                         </div>
+                        <a class="nav-link collapsed" href="/ficha/">
+                            <div class="sb-nav-link-icon"><i class="fa-regular fa-clipboard"></i></div>
+                            Ficha
+                        </a>
+                        <a class="nav-link collapsed" href="#">
+                            <div class="sb-nav-link-icon"><i class="fa-solid fa-timeline"></i></div>
+                            Histórico
+                        </a>
                     </div>
                 </div>
                 <div class="sb-sidenav-footer">
@@ -84,8 +92,8 @@
             </nav>
         </div>
         <div id="layoutSidenav_content">
-            <main>
-                <div class="container-fluid px-4" id="main-content">
+            <main class="h-100">
+                <div class="container-fluid p-4" id="main-content">
                     <!-- Exibindo mensagens -->
                     {% if messages %}
                     <div class="container mt-3">

@@ -13,46 +13,74 @@ function abrirQrCodeModal(tag) {
         .catch(() => alert('Erro ao carregar o QR Code.'));
 }
 
-function abrirHistoricoModal(tag,pontoCalibracao,pontoDescricao) {
-    fetch(`/instrumento/historico/${tag}/${pontoCalibracao}/`)
-        .then(response => response.json())
-        .then(data => {
+function alterarResponsavel(tag) {
+    toggleRowVisibility(false);
 
-            // Atualiza o título do modal
-            document.getElementById('modal-title-historico').textContent = `Histórico do Instrumento: ${tag} - ${pontoDescricao}`;
+    document.getElementById('tag-instrumento-responsavel-editar').value = tag;
+    document.getElementById('form-editar-responsavel').reset();
 
-            // Seleciona o contêiner do corpo do modal
-            const timelineContainer = document.getElementById('modal-body-historico');
-
-            // Limpa o conteúdo anterior
-            timelineContainer.innerHTML = '';
-
-            // Constrói a timeline
-            const timelineHtml = data.historico.map(evento => `
-                <div class="timeline-event">
-                    <div class="timeline-event-content">
-                        <div class="timeline-event-title">${evento.tipo} - ${evento.data}</div>
-                        <div class="timeline-event-body">${evento.descricao}</div>
-                    </div>
-                </div>
-            `).join('');
-
-            // Insere a timeline no modal
-            timelineContainer.innerHTML = `
-                <div class="timeline">
-                    ${timelineHtml}
-                </div>
-            `;
-
-            // Exibe o modal usando Bootstrap
-            const modal = new bootstrap.Modal(document.getElementById('modal-historico'));
-            modal.show();
-        })
-        .catch(error => {
-            console.error('Erro ao carregar o histórico:', error);
-            alert('Erro ao carregar o histórico.');
-        });
+    const modal = new bootstrap.Modal(document.getElementById('modal-alterar-responsavel'));
+    modal.show();
 }
+
+function toggleRowVisibility(isVisible) {
+    const hideRows = document.querySelectorAll('.hide-row');
+    hideRows.forEach(row => {
+        row.style.visibility = isVisible ? 'visible' : 'hidden';
+        row.style.opacity = isVisible ? 1 : 0;
+    });
+}
+
+document.getElementById('motivo-editar-responsavel').addEventListener('change', function() {
+    document.getElementById('col-nome-editar-responsavel').style.visibility = 'visible';
+    document.getElementById('col-nome-editar-responsavel').style.opacity = 1;
+});
+
+document.getElementById('nome-editar-responsavel').addEventListener('change', function() {
+    toggleRowVisibility(this.value !== "");
+});
+
+
+// function abrirHistoricoModal(tag,pontoCalibracao,pontoDescricao) {
+//     fetch(`/instrumento/historico/${tag}/${pontoCalibracao}/`)
+//         .then(response => response.json())
+//         .then(data => {
+
+//             // Atualiza o título do modal
+//             document.getElementById('modal-title-historico').textContent = `Histórico do Instrumento: ${tag} - ${pontoDescricao}`;
+
+//             // Seleciona o contêiner do corpo do modal
+//             const timelineContainer = document.getElementById('modal-body-historico');
+
+//             // Limpa o conteúdo anterior
+//             timelineContainer.innerHTML = '';
+
+//             // Constrói a timeline
+//             const timelineHtml = data.historico.map(evento => `
+//                 <div class="timeline-event">
+//                     <div class="timeline-event-content">
+//                         <div class="timeline-event-title">${evento.tipo} - ${evento.data}</div>
+//                         <div class="timeline-event-body">${evento.descricao}</div>
+//                     </div>
+//                 </div>
+//             `).join('');
+
+//             // Insere a timeline no modal
+//             timelineContainer.innerHTML = `
+//                 <div class="timeline">
+//                     ${timelineHtml}
+//                 </div>
+//             `;
+
+//             // Exibe o modal usando Bootstrap
+//             const modal = new bootstrap.Modal(document.getElementById('modal-historico'));
+//             modal.show();
+//         })
+//         .catch(error => {
+//             console.error('Erro ao carregar o histórico:', error);
+//             alert('Erro ao carregar o histórico.');
+//         });
+// }
 
 function enviarCalibracao(tag,pontoCalibracao) {
 
@@ -289,68 +317,6 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
     });
-
-    // Captura o evento de envio do formulário
-    formResponsavel.addEventListener('submit', async (event) => {
-        event.preventDefault(); // Impede o envio padrão do formulário
-
-        // Cria o objeto com os dados do formulário
-        const formData = new FormData(formResponsavel);
-
-        // Converte os dados do formulário para JSON
-        const jsonData = {};
-        formData.forEach((value, key) => {
-            jsonData[key] = value;
-        });
-
-        try {
-            // Envia a requisição para o backend
-            const response = await fetch('/escolher-responsavel/', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': getCsrfToken(), // Obtém o CSRF Token
-                },
-                body: JSON.stringify(jsonData), // Dados em JSON
-            });
-
-            if (response.ok) {
-                const data = await response.json(); // Parse da resposta JSON
-                
-                // Exibe uma mensagem de sucesso usando SweetAlert
-                Swal.fire({
-                    icon: 'success',
-                    title: 'Sucesso!',
-                    text: data.message || 'Operação concluída com sucesso!',
-                });
-
-                $('#instrumentos-table').DataTable().ajax.reload(); // Reatualiza a tabela
-
-                // Fecha o modal
-                const modal = bootstrap.Modal.getInstance(document.getElementById('modal-responsavel'));
-                modal.hide();
-
-            } else {
-                const errorData = await response.json();
-                // Exibe uma mensagem de erro usando SweetAlert
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Erro!',
-                    text: errorData.message || 'Algo deu errado, tente novamente.',
-                });
-            }
-
-        } catch (error) {
-            console.error('Erro na requisição:', error);
-            // Exibe uma mensagem de erro genérica em caso de falha na requisição
-            Swal.fire({
-                icon: 'error',
-                title: 'Erro de Conexão',
-                text: 'Erro ao enviar o formulário. Verifique sua conexão e tente novamente.',
-            });
-        }
-    });
-
 });
 
 // Função para obter o CSRF Token do cookie
@@ -423,24 +389,50 @@ function buscarUltimaAnaliseInstrumento(idEnvio, pontoCalibracao) {
         });
 }
 
-function abrirModalEscolherResponsavel(tag, responsavel_id, dataEntrega) {
+function abrirModalEscolherResponsavel(tag) {
+
     document.getElementById('modal-title-responsavel').textContent = `Escolher responsável para: ${tag}`;
     document.getElementById('tag-instrumento-responsavel').value = tag;
     document.getElementById('formResponsavel').reset();
-    const selectResponsavel = document.getElementById("nome-responsavel");
-    const selectDataEntrega = document.getElementById("dataEntrega");
 
-    console.log(dataEntrega);
+    document.getElementById('formResponsavel').style.visibility = 'visible';
+    document.getElementById('formResponsavel').style.opacity = '1';
+    document.getElementById('formResponsavel').style.position = 'relative';
 
-    if (responsavel_id !== null) {
-        selectResponsavel.value = responsavel_id;
-        selectResponsavel.disabled = true;
-        selectDataEntrega.value = dataEntrega;
-        selectDataEntrega.disabled = true;
-    } else {
-        selectResponsavel.disabled = false;
-        selectDataEntrega.disabled = false;
-    }
+    // Exibe o formulário de visualização
+    document.getElementById('form-visualizar-ficha').style.visibility = 'hidden';
+    document.getElementById('form-visualizar-ficha').style.opacity = '0';
+    document.getElementById('form-visualizar-ficha').style.position = 'absolute';
+
+    var canvas = document.getElementById('signature-canvas');
+    canvas.width = canvas.offsetWidth;
+    canvas.height = canvas.offsetHeight;
+
+    const modal = new bootstrap.Modal(document.getElementById('modal-responsavel'));
+    modal.show();
+}
+
+function visualizarResponsavel(tag, responsavel_id, data_entrega) {
+
+    document.getElementById('modal-title-responsavel').textContent = `Responsável do instrumento: ${tag}`;
+    document.getElementById('tag-instrumento-responsavel').value = tag;
+    document.getElementById('formResponsavel').reset();
+
+    document.getElementById('nome-responsavel-visualizar-ficha').value = responsavel_id;
+    document.getElementById('dataEntrega-visualizar-ficha').value = data_entrega;
+
+    document.getElementById('formResponsavel').style.visibility = 'hidden';
+    document.getElementById('formResponsavel').style.opacity = '0';
+    document.getElementById('formResponsavel').style.position = 'absolute';
+
+    // Exibe o formulário de visualização
+    document.getElementById('form-visualizar-ficha').style.visibility = 'visible';
+    document.getElementById('form-visualizar-ficha').style.opacity = '1';
+    document.getElementById('form-visualizar-ficha').style.position = 'relative';
+
+    var canvas = document.getElementById('signature-canvas');
+    canvas.width = canvas.offsetWidth;
+    canvas.height = canvas.offsetHeight;
 
     const modal = new bootstrap.Modal(document.getElementById('modal-responsavel'));
     modal.show();

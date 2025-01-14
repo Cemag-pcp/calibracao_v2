@@ -22,7 +22,7 @@ $(document).ready(function () {
                 defaultContent: '<i class="fa fa-plus-circle text-primary" title="Expandir"></i>',
             },
             { data: 'tag', title: 'Tag' },
-            { data: 'tipo_instrumento', title: 'Tipo de Instrumento' },
+            { data: 'tipo_instrumento', title: 'Tipo de Instrumento'},
             { data: 'marca', title: 'Marca' },
             { 
                 data: 'status_instrumento',
@@ -74,9 +74,9 @@ $(document).ready(function () {
                 render: function(data, type, row) {
                     console.log(row)
                     if (row.responsavel.matriculaNome === null) {
-                        return `<button class="btn badge btn-secondary btn-sm" onclick="abrirModalEscolherResponsavel('${row.tag}','${row.responsavel.id}','${row.responsavel.dataEntrega}')">Escolher responsável</button>`;
+                        return `<button class="btn badge btn-secondary btn-sm" onclick="abrirModalEscolherResponsavel('${row.tag}')">Escolher responsável</button>`;
                     } else {
-                        return `<span class="btn badge btn-primary" onclick="abrirModalEscolherResponsavel('${row.tag}','${row.responsavel.id}','${row.responsavel.dataEntrega}')">${row.responsavel.matriculaNome}</span>`;
+                        return `<span class="btn badge btn-primary" onclick="visualizarResponsavel('${row.tag}','${row.responsavel.id}','${row.responsavel.dataEntrega}')">${row.responsavel.matriculaNome}</span>`;
                     }
                 }
             },
@@ -92,8 +92,11 @@ $(document).ready(function () {
 
                     let buttons = `
                         <button class="btn badge btn-primary btn-sm" onclick="abrirQrCodeModal('${row.tag}')">Ver QR Code</button>
-                        <button class="btn badge btn-secondary btn-sm" onclick="abrirHistoricoModal('${row.tag}','${row.ponto_pk}')">Histórico</button>
                     `; 
+
+                    if(row.responsavel.id !== null) {
+                        buttons += `<button class="btn badge btn-secondary btn-sm" onclick="alterarResponsavel('${row.tag}')">Alterar Responsável</button>`;
+                    }
 
                     if (row.status_calibracao === 'enviado') {
                         buttons += `<button class="btn badge btn-success btn-sm" onclick="receberCalibracao('${JSON.stringify(ultimoEnvioList)}','${row.tag}')">Receber</button>`;
@@ -108,6 +111,8 @@ $(document).ready(function () {
                 }
             },
         ],
+        responsive: true,
+        autoWidth: false,       // Desativa ajuste automático da largura das colunas
         order: [[1, 'asc']],
     });
 
