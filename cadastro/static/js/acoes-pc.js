@@ -13,11 +13,13 @@ function abrirQrCodeModal(tag) {
         .catch(() => alert('Erro ao carregar o QR Code.'));
 }
 
-function alterarResponsavel(tag) {
+function alterarResponsavel(tag,responsavel_id) {
     toggleRowVisibility(false);
 
-    document.getElementById('tag-instrumento-responsavel-editar').value = tag;
     document.getElementById('form-editar-responsavel').reset();
+    document.getElementById('tag-instrumento-responsavel-editar').value = tag;
+    console.log(responsavel_id)
+    document.getElementById('nome-ultimo-responsavel').value = responsavel_id;
 
     const modal = new bootstrap.Modal(document.getElementById('modal-alterar-responsavel'));
     modal.show();
@@ -94,6 +96,69 @@ function enviarCalibracao(tag,pontoCalibracao) {
 
 }
 
+function substituicaoInstrumento(tag, responsavel,instrumento_id) {
+
+    document.getElementById('modal-title-enviar').textContent = `Enviar instrumento: ${tag}`;
+    document.getElementById('tag-instrumento-status-substituicao').value = instrumento_id;
+    let formDevolucao = document.getElementById('statusInstrumentoDevolucao');
+    let formSubstituicao = document.getElementById('statusInstrumentoSubstituicao');
+    let colInstrumentoStatusSubstituicao = document.querySelectorAll('.col-instrumento-status-substituicao');
+
+    console.log(responsavel)
+    if (responsavel === 'null') {
+        colInstrumentoStatusSubstituicao.forEach(element => element.classList.add('d-none'));
+    } else {
+        colInstrumentoStatusSubstituicao.forEach(element => element.classList.remove('d-none'));
+    }
+    
+    formDevolucao.classList.add('d-none');
+    formDevolucao.reset();
+    formSubstituicao.classList.remove('d-none');
+    formSubstituicao.reset();
+
+    document.getElementById('tag-instrumento-envio').value = tag;
+    document.getElementById('statusInstrumentoModalLabel').textContent = "Deseja confirmar a substituição do instrumento " + tag + " ?";
+    let responsavelStatus = document.getElementById('responsavel-status-substituicao');
+    let instrumentoStatus = document.getElementById('instrumento-status-substituicao');
+
+    responsavelStatus.value = responsavel;
+
+    for (let option of instrumentoStatus.options) { 
+        if (option.value === tag) {
+            option.style.display = 'none';
+        } else {
+            option.style.display = 'block';
+        }
+    }
+
+    console.log(document.getElementById('responsavel-status-substituicao').value)
+
+    const modal = new bootstrap.Modal(document.getElementById('statusInstrumentoModal'));
+    modal.show();
+
+}
+
+// function devolucaoInstrumento(tag,responsavel) {
+
+//     document.getElementById('modal-title-enviar').textContent = `Enviar instrumento: ${tag}`;
+//     let formDevolucao = document.getElementById('statusInstrumentoDevolucao');
+//     let formSubstituicao = document.getElementById('statusInstrumentoSubstituicao');
+    
+//     formDevolucao.classList.remove('d-none');
+//     formDevolucao.reset();
+//     formSubstituicao.classList.add('d-none');
+//     formSubstituicao.reset();
+
+//     document.getElementById('tag-instrumento-envio').value = tag;
+//     document.getElementById('statusInstrumentoModalLabel').textContent = "Deseja confirmar a devolução do instrumento " + tag + " ?";
+    
+//     document.getElementById('responsavel-status-devolucao').value = responsavel;
+
+//     const modal = new bootstrap.Modal(document.getElementById('statusInstrumentoModal'));
+//     modal.show();
+
+// }
+
 function receberCalibracao(idsEnvio, tag) {
     document.getElementById('modal-title-recebimento').textContent = `Recebimento do instrumento: ${tag}`;
     console.log(idsEnvio)
@@ -131,7 +196,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const formEnviar = document.getElementById('formEnviar');
     const formRecebimento = document.getElementById('formRecebimento');
     const formAnalise = document.getElementById('formAnalise');
-    const formResponsavel = document.getElementById('formResponsavel');
+    const formStatusInstrumento = document.getElementById('statusInstrumentoSubstituicao');
 
     // Captura o evento de envio do formulário
     formEnviar.addEventListener('submit', async (event) => {
@@ -317,6 +382,69 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
     });
+
+    formStatusInstrumento.addEventListener('submit', async (event) => {
+        event.preventDefault(); // Impede o envio padrão do formulário
+         // Cria o objeto com os dados do formulário
+         const formData = new FormData(formStatusInstrumento);
+
+         // Converte os dados do formulário para JSON
+         const jsonData = {};
+         formData.forEach((value, key) => {
+             jsonData[key] = value;
+         });
+
+         console.log(formData)
+
+         console.log(jsonData)
+ 
+         try {
+             // Envia a requisição para o backend
+             const response = await fetch('/substituir-instrumento/', {
+                 method: 'POST',
+                 headers: {
+                     'Content-Type': 'application/json',
+                     'X-CSRFToken': getCsrfToken(), // Obtém o CSRF Token
+                 },
+                 body: JSON.stringify(jsonData), // Dados em JSON
+             });
+ 
+             if (response.ok) {
+                 const data = await response.json(); // Parse da resposta JSON
+ 
+                 // Exibe uma mensagem de sucesso usando SweetAlert
+                 Swal.fire({
+                     icon: 'success',
+                     title: 'Sucesso!',
+                     text: data.message || 'Operação concluída com sucesso!',
+                 });
+ 
+                 $('#instrumentos-table').DataTable().ajax.reload(); // Reatualiza a tabela
+ 
+                 // Fecha o modal
+                 const modal = bootstrap.Modal.getInstance(document.getElementById('modal-analise'));
+                 modal.hide();
+ 
+             } else {
+                 const errorData = await response.json();
+                 // Exibe uma mensagem de erro usando SweetAlert
+                 Swal.fire({
+                     icon: 'error',
+                     title: 'Erro!',
+                     text: errorData.message || 'Algo deu errado, tente novamente.',
+                 });
+             }
+ 
+         } catch (error) {
+             console.error('Erro na requisição:', error);
+             // Exibe uma mensagem de erro genérica em caso de falha na requisição
+             Swal.fire({
+                 icon: 'error',
+                 title: 'Erro de Conexão',
+                 text: 'Erro ao enviar o formulário. Verifique sua conexão e tente novamente.',
+             });
+         }
+    })
 });
 
 // Função para obter o CSRF Token do cookie

@@ -6,13 +6,18 @@
 {% endblock %}
 
 {% block content %}
+
+<div class="d-flex justify-content-between mb-3">
+    <h2>Plano Mestre</h2>
+    <button class="btn btn-primary"><i class="fa-solid fa-plus"></i> Adicionar Instrumentos</button>
+</div>
+
 <table id="instrumentos-table" class="display table table-striped table-bordered">
     <thead>
         <tr>
             <th></th>
             <th>Tag</th>
             <th>Tipo de Instrumento</th>
-            <th>Marca</th>
             <th>Status</th>
             <th>Última Calibração</th>
             <th>Próxima Calibração</th>
@@ -32,7 +37,7 @@
                 <h5 class="modal-title" id="modal-title-qrcode"></h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <div class="modal-body" id="modal-body-qrcode">
+            <div class="modal-body" id="modal-body-qrcode" style="margin: auto;">
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
@@ -98,7 +103,7 @@
 
                     <div class="row mb-3">
                         <!-- Laboratório -->
-                        <div class="col-sm-4">
+                        <div class="col-sm-4 mb-3">
                             <label for="laboratorio" class="form-label">Laboratório</label>
                             <select class="form-control" name="laboratorio" id="laboratorio" required>
                                 <option value="">Selecione um laboratório</option>
@@ -108,7 +113,7 @@
                             </select>
                         </div>
                         <!-- Natureza -->
-                        <div class="col-sm-4">
+                        <div class="col-sm-4 mb-3">
                             <label for="natureza" class="form-label">Natureza</label>
                             <select class="form-control" name="natureza" id="natureza">
                                 <option value="">Selecione a natureza</option>
@@ -118,12 +123,23 @@
                             </select>
                         </div>
                         <!-- Método -->
-                        <div class="col-sm-4">
+                        <div class="col-sm-4 mb-3">
                             <label for="metodo" class="form-label">Método</label>
                             <select class="form-control" name="metodo" id="metodo">
                                 <option value="">Selecione o método</option>
                                 {% for metodo in metodos %}
                                 <option value="{{ metodo.0 }}">{{ metodo.1 }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <!-- Instrumento -->
+                        <div class="col-sm-6 mb-3">
+                            <label for="metodo" class="form-label">Instrumento substituido</label>
+                            <select class="form-control" name="metodo" id="metodo">
+                                <option value="">Selecione o instrumento que substituirá o atual</option>
+                                {% for instrumento in instrumentos %}
+                                <option value="{{instrumento.tag}}">{{instrumento.tag}}</option>
                                 {% endfor %}
                             </select>
                         </div>
@@ -364,13 +380,13 @@
                 <form id="formResponsavel">
                     <input type="hidden" name="tag-instrumento-responsavel" id="tag-instrumento-responsavel">
                     <div class="row mb-3">
-                        <div class="col-sm-6 mb-3">
+                        <div class="col-sm-6 mb-3 d-none">
                             <label for="dataEntrega">Motivo</label>
-                            <select class="form-control" name="motivo-responsavel" id="motivo-responsavel" required>
-                                <option value="">-------</option>
-                                <option value="Primeira Entrega">Primeira Entrega</option>
-                                <option value="Substituição">Substituição</option>
-                                <option value="Devolução">Devolução</option>
+                            <select class="form-control" name="motivo-responsavel" id="motivo-responsavel">
+                                <option value="Entrega">-------</option>
+                                {% for motivo in motivos %}
+                                    <option value="{{ motivo.1 }}">{{ motivo.1 }}</option>
+                                {% endfor %}
                             </select>
                         </div>
                         <div class="col-sm-6">
@@ -438,28 +454,29 @@
             </div>
             <form id="form-editar-responsavel">
                 <div class="modal-body" id="modal-body-alterar-responsavel">
+                    <input class="form-control d-none" type="text" name="nome-ultimo-responsavel" id="nome-ultimo-responsavel">
                     <input type="hidden" name="tag-instrumento-responsavel-editar" id="tag-instrumento-responsavel-editar">
                         <div class="row">
-                            <div class="col-sm-6 mb-3">
+                            <div class="col-sm-6 mb-3 d-none">
                                 <label for="dataEntrega">Motivo</label>
                                 <select class="form-control" name="motivo-editar-responsavel" id="motivo-editar-responsavel" required>
-                                    <option value="">-------</option>
-                                    <option value="Primeira Entrega">Primeira Entrega</option>
-                                    <option value="Substituição">Substituição</option>
-                                    <option value="Devolução">Devolução</option>
+                                    <option value="Entrega">-------</option>
+                                    {% for motivo in motivos %}
+                                    <option value="{{ motivo.1 }}">{{ motivo.1 }}</option>
+                                    {% endfor %}
                                 </select>
                             </div>
                             <div class="col-sm-6 mb-3" id="col-nome-editar-responsavel">
                                 <label for="nome-responsavel">Responsável</label>
                                 <select class="form-control" name="nome-editar-responsavel" id="nome-editar-responsavel">
-                                    <option value="">Não designar a nenhum funcionário</option>
+                                    <option value="">Controle da Qualidade</option>
                                     {% for funcionario in funcionarios %}
                                     <option value="{{funcionario.id}}">{{funcionario.matricula}} - {{funcionario.nome}}</option>
                                     {% endfor %}
                                 </select>
                             </div>
-                            <div class="col-sm-6 mb-3 hide-row">
-                                <label for="dataEntrega">Data da entrega</label>
+                            <div class="col-sm-6 mb-3">
+                                <label for="dataEntrega" id="labelDataEntrega">Data da entrega</label>
                                 <input class="form-control" type="date" name="dataEntregaEdicao" id="dataEntregaEdicao">
                             </div>
                         </div>
@@ -478,6 +495,84 @@
         </div>
     </div>
 </div>
+
+<div class="modal fade" id="statusInstrumentoModal" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-labelledby="statusInstrumentoModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h1 class="modal-title fs-5" id="statusInstrumentoModalLabel"></h1>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <form id="statusInstrumentoSubstituicao">
+            <div class="modal-body">
+                <input type="hidden" name="tag-instrumento-status-substituicao" id="tag-instrumento-status-substituicao">
+                <div class="row mb-3 align-items-end">
+                    <div class="col-sm-6 mb-3 col-instrumento-status-substituicao">
+                        <!-- Nome do responsável -->
+                        <label for="nome-status">Responsável</label>
+                        <select class="form-control mb-3" name="responsavel-status-substituicao" id="responsavel-status-substituicao" disabled>
+                            <option value="">-------</option>
+                            {% for funcionario in funcionarios %}
+                            <option value="{{funcionario.id}}">{{funcionario.matricula}} - {{funcionario.nome}}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-sm-6 mb-3 col-instrumento-status-substituicao">
+                        <!-- Data de entrega -->
+                        <label for="instrumento-status-substituicao">Será substituido por qual instrumento?</label>
+                        <select class="form-control" name="instrumento-status-substituicao" id="instrumento-status-substituicao">
+                            <option value="">-------</option>
+                            {% for instrumento in instrumentos %}
+                            <option value="{{instrumento.tag}}">{{instrumento.tag}}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-sm-6 mb-3">
+                        <!-- Data de entrega -->
+                        <label for="data-substituicao">Data da substituição</label>
+                        <input class="form-control" type="date" name="data-substituicao" id="data-substituicao" required>
+                    </div>
+                    <div class="col-sm-6 mb-3">
+                        <!-- Data de entrega -->
+                        <label for="dataEntrega">Motivo da substituição</label>
+                        <input class="form-control" style="background-color: #e9ecef; opacity: 1;" type="text" name="instrumento-status-substituicao" id="instrumento-status-substituicao" value="Danificado" readonly>
+                    </div>  
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="submit" class="btn btn-primary">Confirmar</button>
+            </div>
+        </form>
+        <form class="d-none" id="statusInstrumentoDevolucao">
+            <div class="modal-body">
+                <div>
+                    <input type="hidden" name="tag-instrumento-status" id="tag-instrumento-status">
+                    <div class="row mb-3">
+                        <div class="col-sm-6  mb-3">
+                            <!-- Data de entrega -->
+                            <label for="dataEntrega-devolver-instrumento">Data da devolução</label>
+                            <input class="form-control" type="date" name="dataEntrega-devolver-instrumento" id="dataEntrega-devolver-instrumento" required>
+                        </div>
+                        <div class="col-sm-6 mb-3">
+                            <!-- Nome do responsável -->
+                            <label for="nome-status">Responsável</label>
+                            <select class="form-control" name="responsavel-status-devolucao" id="responsavel-status-devolucao" disabled>
+                                <option value="">-------</option>
+                                {% for funcionario in funcionarios %}
+                                <option value="{{funcionario.id}}">{{funcionario.matricula}} - {{funcionario.nome}}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>            
+                </div>  
+            </div>
+            <div class="modal-footer">
+                <button type="submit" class="btn btn-primary">Confirmar</button>
+            </div>
+        </form>
+      </div>
+    </div>
+  </div>
 
 {% endblock %}
 

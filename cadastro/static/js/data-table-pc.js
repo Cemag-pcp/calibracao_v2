@@ -6,12 +6,7 @@ $(document).ready(function () {
             url: '/instrumentos-data/', // URL da view criada
             type: 'GET',
             data: function (d) {
-                // Adiciona os filtros personalizados, se necessário
-                // Exemplo:
-                // d.status = $('#filterStatus').val();
-                // d.area = $('#filterArea').val();
-                // d.solicitante = $('#filterSolicitante').val();
-                // d.data_inicio = $('#filterDataInicio').val();
+
             }
         },
         columns: [
@@ -23,7 +18,6 @@ $(document).ready(function () {
             },
             { data: 'tag', title: 'Tag' },
             { data: 'tipo_instrumento', title: 'Tipo de Instrumento'},
-            { data: 'marca', title: 'Marca' },
             { 
                 data: 'status_instrumento',
                 title: 'Status',
@@ -58,7 +52,7 @@ $(document).ready(function () {
             },
             {
                 data: 'status_calibracao_string',
-                title: 'Status Geral da Calibração',
+                title: 'Status Geral',
                 render: function (data, type, row) {
                     const ultimoEnvioList = row.pontos_calibracao.map(ponto => ponto.ultimo_certificado);
                     const contemAprovado = ultimoEnvioList.some(aprovado => aprovado === "aprovado" || aprovado === null);
@@ -91,22 +85,63 @@ $(document).ready(function () {
                     const todos_certificados_true = analise_certificados.every(certificado => certificado === true);
 
                     let buttons = `
-                        <button class="btn badge btn-primary btn-sm" onclick="abrirQrCodeModal('${row.tag}')">Ver QR Code</button>
+                        <td data-title="Exec">
+                            <div class="col-sm-4 d-flex dropdown justify-content-center align-items-center"
+                                style="padding-left: 0.35rem;">
+                                <a data-bs-toggle="dropdown" aria-expanded="false"
+                                    style="cursor: pointer;">
+                                    <i class="fa-solid fa-angle-down" style="color:black;"></i>
+                                </a>
+                                <ul class="dropdown-menu">
+                                    <li><p class="dropdown-header">Histórico</p></li>
+                                    <li><a class="dropdown-item" style="cursor:pointer" onclick="abrirQrCodeModal('${row.tag}')">
+                                        Ver QR Code
+                                    </a></li>
                     `; 
 
+                    buttons +=`<li><hr class="dropdown-divider"></li>
+                                    <li><p class="dropdown-header">Item</p></li>`
+
                     if(row.responsavel.id !== null) {
-                        buttons += `<button class="btn badge btn-secondary btn-sm" onclick="alterarResponsavel('${row.tag}')">Alterar Responsável</button>`;
+                        buttons += `<li>
+                                        <a class="dropdown-item" style="cursor:pointer"  onclick="alterarResponsavel('${row.tag}','${row.responsavel.id}')">
+                                            Alterar Responsável
+                                        </a>
+                                    </li>`;
                     }
 
+                    buttons += `<li>
+                                <a class="dropdown-item" style="cursor:pointer"  onclick="substituicaoInstrumento('${row.tag}','${row.responsavel.id}','${row.id}')">
+                                    Substituir
+                                </a>
+                            </li>`;
+
                     if (row.status_calibracao === 'enviado') {
-                        buttons += `<button class="btn badge btn-success btn-sm" onclick="receberCalibracao('${JSON.stringify(ultimoEnvioList)}','${row.tag}')">Receber</button>`;
+                        buttons += `<li><hr class="dropdown-divider"></li>
+                                    <li><p class="dropdown-header">Status: A Receber</p></li>
+                                    <li><a class="dropdown-item" style="cursor:pointer" onclick="receberCalibracao('${JSON.stringify(ultimoEnvioList)}','${row.tag}')">
+                                        Receber
+                                    </a></li>`;
                     } else if (row.status_calibracao === 'recebido' && contem_null) {
-                        buttons += ``;
+                        buttons += `<li><hr class="dropdown-divider"></li>
+                                    <li><p class="dropdown-header">Status: A Analisar</p></li>`;
                     } else if (row.status_calibracao === 'recebido' && todos_certificados_true) {
-                        buttons += `<button class="btn badge btn-warning btn-sm" onclick="enviarCalibracao('${row.tag}','${row.ponto_pk}')">Enviar</button>`;
+                        buttons += `<li><hr class="dropdown-divider"></li>
+                                    <li><p class="dropdown-header">Status: A Enviar</p></li>
+                                    <li><a class="dropdown-item" style="cursor:pointer"  onclick="enviarCalibracao('${row.tag}','${row.ponto_pk}')">
+                                        Enviar
+                                    </a></li>`;
                     } else {
-                        buttons += `<button class="btn badge btn-warning btn-sm" onclick="enviarCalibracao('${row.tag}','${row.ponto_pk}')">Enviar</button>`;
+                        buttons += `<li><hr class="dropdown-divider"></li>
+                                    <li><p class="dropdown-header">Status: A Enviar</p></li>
+                                    <li><a class="dropdown-item" style="cursor:pointer"  onclick="enviarCalibracao('${row.tag}','${row.ponto_pk}')">
+                                        Enviar
+                                    </a></li>`;
                     }
+                    
+                    buttons += `</ul>
+                            </div>
+                        </td>`
                     return buttons;
                 }
             },

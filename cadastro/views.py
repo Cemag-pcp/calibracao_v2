@@ -6,7 +6,7 @@ from django.db import transaction
 from django.core.files.base import ContentFile
 
 from inspecao.models import Envio, Laboratorio, AnaliseCertificado
-from ficha.models import AssinaturaInstrumento
+from ficha.models import AssinaturaInstrumento, StatusInstrumento
 from .models import InfoInstrumento, HistoricoInstrumento, Funcionario, DesignarInstrumento, Operadores, PontoCalibracao
 from cadastro.utils import *
 
@@ -34,13 +34,17 @@ def home(request):
     operadores = Operadores.objects.filter(status='ativo')
     naturezas = Envio.NATUREZA_CHOICES
     metodos = Envio.METODO_CHOICES
+    motivos = AssinaturaInstrumento.STATUS_CHOICES
     funcionarios = Funcionario.objects.all()
+    instrumento = InfoInstrumento.objects.all()
 
     return render(request, "home.html", {'laboratorios':laboratorios,
                                          'operadores':operadores,
                                          'naturezas':naturezas,
                                          'metodos':metodos,
-                                         'funcionarios':funcionarios})
+                                         'funcionarios':funcionarios,
+                                         'motivos':motivos,
+                                         'instrumentos':instrumento})
 
 def instrumentos_data(request):
     hoje = datetime.now().date()
@@ -179,67 +183,68 @@ def historico_view(request, tag, pk_ponto):
 def escolher_responsavel(request):
     if request.method == 'POST':
         try:
-            # Parse do corpo da requisição
-            data = json.loads(request.body)
+            with transaction.atomic():
+                # Parse do corpo da requisição
+                data = json.loads(request.body)
 
-            signature_base64 = data.get('signature', '')
+                signature_base64 = data.get('signature', '')
 
-            format, imgstr = signature_base64.split(';base64,') 
-            ext = format.split('/')[-1]  # Extensão do arquivo, como 'png', 'jpg', etc.
-            
-            # Gerar um UUID para o nome do arquivo
-            file_name = f"{uuid.uuid4()}.{ext}"
-
-            # Criar o arquivo a partir da string base64
-            signature_file = ContentFile(base64.b64decode(imgstr), name=file_name)
+                format, imgstr = signature_base64.split(';base64,') 
+                ext = format.split('/')[-1]  # Extensão do arquivo, como 'png', 'jpg', etc.
                 
-            data_entrega_str = data.get('dataEntrega')
-            motivo_responsavel = data.get('motivo-responsavel')
+                # Gerar um UUID para o nome do arquivo
+                file_name = f"{uuid.uuid4()}.{ext}"
 
-            if not data_entrega_str:
-                return JsonResponse({'status': 'error', 'message': 'Data de análise não fornecida'}, status=400)
-            try:
-                # Converte a string em objeto datetime.date
-                data_entrega = datetime.strptime(data_entrega_str, '%Y-%m-%d').date()
-            except ValueError:
-                return JsonResponse({'status': 'error', 'message': 'Formato de data inválido. Use YYYY-MM-DD.'}, status=400)
+                # Criar o arquivo a partir da string base64
+                signature_file = ContentFile(base64.b64decode(imgstr), name=file_name)
+                    
+                data_entrega_str = data.get('dataEntrega')
+                motivo_responsavel = data.get('motivo-responsavel')
 
-            # Obtém os objetos relacionados
-            funcionario_object = get_object_or_404(Funcionario, pk=data.get('nome-responsavel'))
-            instrumento_object = get_object_or_404(InfoInstrumento, tag=data.get('tag-instrumento-responsavel'))
+                if not data_entrega_str:
+                    return JsonResponse({'status': 'error', 'message': 'Data de análise não fornecida'}, status=400)
+                try:
+                    # Converte a string em objeto datetime.date
+                    data_entrega = datetime.strptime(data_entrega_str, '%Y-%m-%d').date()
+                except ValueError:
+                    return JsonResponse({'status': 'error', 'message': 'Formato de data inválido. Use YYYY-MM-DD.'}, status=400)
 
-            # Verifica se o instrumento já possui um responsável
-            designacao = DesignarInstrumento.objects.filter(instrumento_escolhido=instrumento_object).first()
+                # Obtém os objetos relacionados
+                funcionario_object = get_object_or_404(Funcionario, pk=data.get('nome-responsavel'))
+                instrumento_object = get_object_or_404(InfoInstrumento, tag=data.get('tag-instrumento-responsavel'))
 
-            if designacao:
-                # Atualiza o responsável existente
-                descricao = f"Mudando responsável de: {designacao.responsavel.matricula} - {designacao.responsavel.nome} para: {funcionario_object.matricula} - {funcionario_object.nome}\nLink da ficha assinada:"
-                registrar_mudanca_responsavel(instrumento_object,descricao=descricao)
+                # Verifica se o instrumento já possui um responsável
+                designacao = DesignarInstrumento.objects.filter(instrumento_escolhido=instrumento_object).first()
+
+                if designacao:
+                    # Atualiza o responsável existente
+                    descricao = f"Mudando responsável de: {designacao.responsavel.matricula} - {designacao.responsavel.nome} para: {funcionario_object.matricula} - {funcionario_object.nome}\nLink da ficha assinada:"
+                    registrar_mudanca_responsavel(instrumento_object,descricao=descricao)
+                    
+                    designacao.responsavel = funcionario_object
+                    designacao.data_entrega_funcionario=data_entrega
+                    designacao.save()
+
+                else:
+                    # Cria uma nova designação
+                    descricao = f"Atribuindo a responsabilidade para: {funcionario_object.matricula} - {funcionario_object.nome}"
+                    registrar_primeiro_responsavel(instrumento_object,descricao=descricao)
+
+                    designacao = DesignarInstrumento.objects.create(
+                        instrumento_escolhido=instrumento_object,
+                        responsavel=funcionario_object,
+                        data_entrega_funcionario=data_entrega
+                    )
                 
-                designacao.responsavel = funcionario_object
-                designacao.data_entrega_funcionario=data_entrega
-                designacao.save()
-
-            else:
-                # Cria uma nova designação
-                descricao = f"Atribuindo a responsabilidade para: {funcionario_object.matricula} - {funcionario_object.nome}"
-                registrar_primeiro_responsavel(instrumento_object,descricao=descricao)
-
-                designacao = DesignarInstrumento.objects.create(
-                    instrumento_escolhido=instrumento_object,
-                    responsavel=funcionario_object,
-                    data_entrega_funcionario=data_entrega
+                AssinaturaInstrumento.objects.create(
+                    instrumento=instrumento_object,
+                    assinante=funcionario_object,
+                    data_entrega=data_entrega,
+                    foto_assinatura=signature_file,
+                    motivo=motivo_responsavel
                 )
-            
-            AssinaturaInstrumento.objects.create(
-                instrumento=instrumento_object,
-                assinante=funcionario_object,
-                data_entrega=data_entrega,
-                foto_assinatura=signature_file,
-                motivo=motivo_responsavel
-            )
 
-            return JsonResponse({'status': 'success',}, status=200)
+                return JsonResponse({'status': 'success',}, status=200)
 
         except json.JSONDecodeError:
             return JsonResponse({'status': 'error', 'message': 'Erro ao processar o JSON enviado'}, status=400)
@@ -257,10 +262,12 @@ def editar_responsavel(request):
                 # Parse do corpo da requisição
                 data = json.loads(request.body)
 
-                nome_novo_responsavel = data.get('nome-editar-responsavel')
+                id_novo_responsavel = data.get('nome-editar-responsavel')
+                nome_ultimo_responsavel = data.get('nome-ultimo-responsavel')
+                id_novo_responsavel = None if data.get('nome-editar-responsavel') == '' else id_novo_responsavel
                 motivo_editar_responsavel = data.get('motivo-editar-responsavel')
 
-                if nome_novo_responsavel != '':
+                if id_novo_responsavel != None and (id_novo_responsavel != nome_ultimo_responsavel):
                     signature_base64 = data.get('signature', '')
 
                     format, imgstr = signature_base64.split(';base64,') 
@@ -271,24 +278,27 @@ def editar_responsavel(request):
 
                     # Criar o arquivo a partir da string base64
                     signature_file = ContentFile(base64.b64decode(imgstr), name=file_name)
-                    
-                    data_entrega_str = data.get('dataEntregaEdicao')
-                    if not data_entrega_str:
-                        return JsonResponse({'status': 'error', 'message': 'Data de análise não fornecida'}, status=400)
-                    try:
-                        # Converte a string em objeto datetime.date
-                        data_entrega = datetime.strptime(data_entrega_str, '%Y-%m-%d').date()
-                    except ValueError:
-                        return JsonResponse({'status': 'error', 'message': 'Formato de data inválido. Use YYYY-MM-DD.'}, status=400)
 
                     # Obtém os objetos relacionados
-                    funcionario_object = get_object_or_404(Funcionario, pk=data.get('nome-editar-responsavel'))
+                # funcionario_object = get_object_or_404(Funcionario, pk=data.get('nome-editar-responsavel'))
+                funcionario_object = Funcionario.objects.filter(id=id_novo_responsavel).first()
+                ultimo_funcionario = Funcionario.objects.filter(id=nome_ultimo_responsavel).first()
+
+                data_entrega_str = data.get('dataEntregaEdicao')
+
+                if not data_entrega_str:
+                    return JsonResponse({'status': 'error', 'message': 'Data de análise não fornecida'}, status=400)
+                try:
+                    # Converte a string em objeto datetime.date
+                    data_entrega = datetime.strptime(data_entrega_str, '%Y-%m-%d').date()
+                except ValueError:
+                    return JsonResponse({'status': 'error', 'message': 'Formato de data inválido. Use YYYY-MM-DD.'}, status=400)
                 instrumento_object = get_object_or_404(InfoInstrumento, tag=data.get('tag-instrumento-responsavel-editar'))
 
                 # Verifica se o instrumento já possui um responsável
                 designacao = DesignarInstrumento.objects.filter(instrumento_escolhido=instrumento_object).first()
 
-                if designacao and nome_novo_responsavel != '':
+                if designacao and id_novo_responsavel != None and (id_novo_responsavel != nome_ultimo_responsavel):
                     # Atualiza o responsável existente
                     descricao = f"Mudando responsável de: {designacao.responsavel.matricula} - {designacao.responsavel.nome} para: {funcionario_object.matricula} - {funcionario_object.nome}\nLink da ficha assinada:"
                     registrar_mudanca_responsavel(instrumento_object,descricao=descricao)
@@ -304,11 +314,18 @@ def editar_responsavel(request):
                     )
                 else:
                     # Atualiza o responsável existente
-                    descricao = f"Mudando responsável de: {designacao.responsavel.matricula} - {designacao.responsavel.nome} para: Nenhum Responsável \nLink da ficha assinada:"
+                    descricao = f"Mudando responsável de: {designacao.responsavel.matricula} - {designacao.responsavel.nome} para: Controle da Qualidade \nLink da ficha assinada:"
                     registrar_mudanca_responsavel(instrumento_object,descricao=descricao)
                     instrumento_object.status_instrumento = 'ativo'
                     instrumento_object.save()
                     designacao.delete()
+
+                StatusInstrumento.objects.create(
+                    instrumento=instrumento_object,
+                    funcionario=ultimo_funcionario,
+                    data_entrega=data_entrega,
+                    motivo='devolução'
+                )
 
                 return JsonResponse({'status': 'success',}, status=200)
 
@@ -318,3 +335,17 @@ def editar_responsavel(request):
             return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
 
     return JsonResponse({'status': 'error', 'message': 'Método não permitido'}, status=405)
+
+def substituir_instrumento(request):
+    if request.method == 'POST':
+        try:
+            with transaction.atomic():
+                data = json.loads(request.body)
+
+                print(data)
+
+                return JsonResponse({'status': 'success',}, status=200)
+        except json.JSONDecodeError:
+            return JsonResponse({'status': 'error', 'message': 'Erro ao processar o JSON enviado'}, status=400)
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': str(e)}, status=500)

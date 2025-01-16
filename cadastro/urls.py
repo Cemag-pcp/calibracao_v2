@@ -10,6 +10,7 @@ urlpatterns = [
     path('instrumento/qrcode/<str:tag>/', views.qrcode_view, name='qrcode_view'),
     path('instrumento/historico/<str:tag>/<int:pk_ponto>/', views.historico_view, name='historico_view'),
 
+    path('substituir-instrumento/', views.substituir_instrumento, name='substituir_instrumento'),
     path('escolher-responsavel/', views.escolher_responsavel, name='escolher_responsavel'),
     path('editar-responsavel/', views.editar_responsavel, name='editar_responsavel'),
 
