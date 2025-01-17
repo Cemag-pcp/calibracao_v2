@@ -45,7 +45,7 @@ def emissao_ficha_por_funcionario(request, id):
                 })
 
             # Ordena os dados combinados pela data de entrega
-            dados_combinados.sort(key=lambda x: x['data_entrega'])
+            dados_combinados.sort(key=lambda x: (x['data_entrega'], x['tipo'] == 'Assinatura'))
 
             wb = load_workbook("Termo de Responsabilidade Equipamentos de Medição.xlsx")
 
@@ -64,7 +64,7 @@ def emissao_ficha_por_funcionario(request, id):
                     line_height = ws.row_dimensions[18].height  # Access height from source row
                     ws.row_dimensions[linha_destino].height = line_height  # Set the same height for the target row
 
-                    pontos_calibracao = dado['instrumento'].pontos_calibracao.filter(status_ponto_calibracao='ativo')
+                    pontos_calibracao = dado['instrumento'].pontos_calibracao.filter()
                     ponto_calibracao_str = ", ".join([ponto.faixa_nominal for ponto in pontos_calibracao])
                     ws.cell(row=linha_destino, column=1, value=dado['data_entrega'].strftime("%d/%m/%Y"))
                     ws.cell(row=linha_destino, column=2, value=dado['instrumento'].tipo_instrumento.nome)

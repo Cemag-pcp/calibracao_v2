@@ -2,8 +2,9 @@ from django.shortcuts import render,get_object_or_404
 from django.http import JsonResponse
 from django.db import transaction
 
-from cadastro.models import InfoInstrumento, Operadores
+from cadastro.models import InfoInstrumento, Operadores, DesignarInstrumento, Funcionario
 from inspecao.models import Laboratorio, Envio, AnaliseCertificado, PontoCalibracao
+from ficha.models import AssinaturaInstrumento, StatusInstrumento
 from cadastro.utils import *
 
 import json
@@ -21,10 +22,44 @@ def enviar_view(request):
                 natureza = data.get('natureza')
                 metodo = data.get('metodo')
                 tag = data.get('tag-instrumento-envio')
-
+                validacao_de_substituicao = data.get('validacao-de-substituicao')
+                instrumento_substituira_envio = data.get('instrumento-substituira-envio')
+                
                 responsavel_envio_object = get_object_or_404(Operadores, pk=responsavel_envio)
                 laboratorio_object = get_object_or_404(Laboratorio, pk=laboratorio)
                 instrumento_object = get_object_or_404(InfoInstrumento, tag=tag)
+
+                if validacao_de_substituicao == 'Sim':
+                    designicao = get_object_or_404(DesignarInstrumento, instrumento_escolhido=instrumento_object)
+                    designicao.delete()
+
+                    novo_instrumento = InfoInstrumento.objects.filter(id=instrumento_substituira_envio).first()
+                    funcionario = Funcionario.objects.filter(id=designicao.responsavel.id).first()
+
+                    ultima_assinatura = AssinaturaInstrumento.objects.filter(assinante=funcionario).order_by('-data_assinatura').first()
+                    foto_assinatura = ultima_assinatura.foto_assinatura if ultima_assinatura else None
+
+                    # Criar AssinaturaInstrumento
+                    AssinaturaInstrumento.objects.create(
+                        instrumento=novo_instrumento,
+                        assinante=funcionario,
+                        foto_assinatura=foto_assinatura,
+                        motivo='Entrega - Temporária',
+                        data_entrega=data_envio
+                    )
+
+                    DesignarInstrumento.objects.create(
+                        instrumento_escolhido=novo_instrumento,
+                        responsavel=funcionario,
+                        data_entrega_funcionario=data_envio
+                    )
+
+                    StatusInstrumento.objects.create(
+                        funcionario=funcionario,
+                        instrumento=instrumento_object,
+                        motivo='substituição',
+                        data_entrega=data_envio
+                    )
 
                 # Buscar todos os pontos de calibração relacionados
                 pontos_calibracao = instrumento_object.pontos_calibracao.filter(status_ponto_calibracao='ativo')

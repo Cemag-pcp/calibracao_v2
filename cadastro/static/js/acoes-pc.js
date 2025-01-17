@@ -84,58 +84,99 @@ document.getElementById('nome-editar-responsavel').addEventListener('change', fu
 //         });
 // }
 
-function enviarCalibracao(tag,pontoCalibracao) {
+function enviarCalibracao(tag,pontoCalibracao,nomeResponsavel) {
 
     document.getElementById('modal-title-enviar').textContent = `Enviar instrumento: ${tag}`;
+    document.getElementById('col-instrumento-substituira-envio').style.display = 'none';
     document.getElementById('tag-instrumento-envio').value = tag;
     document.getElementById('pk-ponto-calibracao-enviar').value = pontoCalibracao;
     document.getElementById('formEnviar').reset();
+    let novoInstrumento = document.getElementById('instrumento-substituira-envio');
+    let campoParaSubstituirInstrumento = document.getElementById('campo-novo-instrumento');
+    
+    if (nomeResponsavel !== 'null') {
+        campoParaSubstituirInstrumento.style.display = 'block';
+        document.getElementById('descricao-instrumento-substituido').innerHTML = `Atualmente, <strong>${nomeResponsavel}</strong> está responsável pelo instrumento <strong>${tag}</strong>. Gostaria de designar um novo instrumento para ele?`;
+    } else {
+        campoParaSubstituirInstrumento.style.display = 'none';
+    }
+
+    carregarInstrumentosNoSelect(novoInstrumento,tag);
 
     const modal = new bootstrap.Modal(document.getElementById('modal-enviar'));
     modal.show();
 
 }
 
-function substituicaoInstrumento(tag, responsavel,instrumento_id) {
+document.getElementById('validacao-de-substituicao').addEventListener('change', function() {
+    var substituicaoEnvio = document.getElementById('col-instrumento-substituira-envio');
+    if (this.value === 'Sim') {
+        substituicaoEnvio.style.display = 'block';
+        document.getElementById('instrumento-substituira-envio').required = true;
+    } else {
+        substituicaoEnvio.style.display = 'none';
+        document.getElementById('instrumento-substituira-envio').required = false;
+    }
+});
 
+function substituicaoInstrumento(tag, responsavel, instrumento_id) {
     document.getElementById('modal-title-enviar').textContent = `Enviar instrumento: ${tag}`;
-    document.getElementById('tag-instrumento-status-substituicao').value = instrumento_id;
+    document.getElementById('tag-instrumento-status-substituido').value = instrumento_id;
     let formDevolucao = document.getElementById('statusInstrumentoDevolucao');
     let formSubstituicao = document.getElementById('statusInstrumentoSubstituicao');
     let colInstrumentoStatusSubstituicao = document.querySelectorAll('.col-instrumento-status-substituicao');
+    let instrumentoStatusSubstituicao = document.getElementById("instrumento-status-substituicao");
+    let responsavel_id = document.getElementById('responsavel-id');
+    responsavel_id.value = responsavel;
 
-    console.log(responsavel)
     if (responsavel === 'null') {
         colInstrumentoStatusSubstituicao.forEach(element => element.classList.add('d-none'));
+        instrumentoStatusSubstituicao.required = false;
     } else {
         colInstrumentoStatusSubstituicao.forEach(element => element.classList.remove('d-none'));
+        instrumentoStatusSubstituicao.required = true;
     }
-    
+
     formDevolucao.classList.add('d-none');
     formDevolucao.reset();
     formSubstituicao.classList.remove('d-none');
     formSubstituicao.reset();
 
     document.getElementById('tag-instrumento-envio').value = tag;
-    document.getElementById('statusInstrumentoModalLabel').textContent = "Deseja confirmar a substituição do instrumento " + tag + " ?";
+    document.getElementById('statusInstrumentoModalLabel').textContent = `Deseja confirmar a substituição do instrumento ${tag} ?`;
     let responsavelStatus = document.getElementById('responsavel-status-substituicao');
     let instrumentoStatus = document.getElementById('instrumento-status-substituicao');
 
     responsavelStatus.value = responsavel;
 
-    for (let option of instrumentoStatus.options) { 
-        if (option.value === tag) {
-            option.style.display = 'none';
-        } else {
-            option.style.display = 'block';
-        }
-    }
-
-    console.log(document.getElementById('responsavel-status-substituicao').value)
+    carregarInstrumentosNoSelect(instrumentoStatus,tag) 
 
     const modal = new bootstrap.Modal(document.getElementById('statusInstrumentoModal'));
     modal.show();
+}
 
+function carregarInstrumentosNoSelect(selectInstrumentos,tag) {
+    // Fetching all instruments
+    fetch('/substituir-instrumento/')
+    .then(response => response.json())
+    .then(data => {
+        // Populate the instrument options dynamically if needed
+        selectInstrumentos.innerHTML = ''; // Clear existing options
+        let option = document.createElement('option');
+        option.value = '';
+        option.textContent = '---------';
+        selectInstrumentos.appendChild(option);
+        data.forEach(instrument => {
+            let option = document.createElement('option');
+            option.value = instrument.id;
+            option.textContent = instrument.tag;
+            if (instrument.tag === tag) {
+                option.style.display = 'none'; // Hide current instrument
+            }
+            selectInstrumentos.appendChild(option);
+        });
+    })
+    .catch(error => console.error('Error fetching instruments:', error));
 }
 
 // function devolucaoInstrumento(tag,responsavel) {
@@ -394,9 +435,9 @@ document.addEventListener('DOMContentLoaded', () => {
              jsonData[key] = value;
          });
 
-         console.log(formData)
+         let instrumento_substituido = document.getElementById('instrumento-status-substituicao').value
 
-         console.log(jsonData)
+         jsonData['instrumento_substituira'] = instrumento_substituido
  
          try {
              // Envia a requisição para o backend
@@ -422,7 +463,7 @@ document.addEventListener('DOMContentLoaded', () => {
                  $('#instrumentos-table').DataTable().ajax.reload(); // Reatualiza a tabela
  
                  // Fecha o modal
-                 const modal = bootstrap.Modal.getInstance(document.getElementById('modal-analise'));
+                 const modal = bootstrap.Modal.getInstance(document.getElementById('statusInstrumentoModal'));
                  modal.hide();
  
              } else {

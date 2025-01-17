@@ -66,7 +66,7 @@
 
 <!-- Modal para enviar p/ calibração -->
 <div id="modal-enviar" class="modal fade" data-bs-backdrop="static" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
+    <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title" id="modal-title-enviar">Enviar Instrumento para Calibração</h5>
@@ -92,8 +92,8 @@
                         <!-- Responsável do Envio -->
                         <div class="col-sm-6">
                             <label for="responsavelEnvio" class="form-label">Responsável pelo Envio</label>
-                            <select class="form-control" name="responsavelEnvio" id="responsavelEnvio">
-                                <option value="">Selecione o responsável</option>
+                            <select class="form-control" name="responsavelEnvio" id="responsavelEnvio" required>
+                                <option value="">------------</option>
                                 {% for operador in operadores %}
                                 <option value="{{ operador.id }}">{{ operador.matricula }} - {{ operador.nome }}</option>
                                 {% endfor %}
@@ -106,7 +106,7 @@
                         <div class="col-sm-4 mb-3">
                             <label for="laboratorio" class="form-label">Laboratório</label>
                             <select class="form-control" name="laboratorio" id="laboratorio" required>
-                                <option value="">Selecione um laboratório</option>
+                                <option value="">------------</option>
                                 {% for laboratorio in laboratorios %}
                                 <option value="{{ laboratorio.id }}">{{ laboratorio.nome }}</option>
                                 {% endfor %}
@@ -115,8 +115,8 @@
                         <!-- Natureza -->
                         <div class="col-sm-4 mb-3">
                             <label for="natureza" class="form-label">Natureza</label>
-                            <select class="form-control" name="natureza" id="natureza">
-                                <option value="">Selecione a natureza</option>
+                            <select class="form-control" name="natureza" id="natureza" required>
+                                <option value="">------------</option>
                                 {% for natureza in naturezas %}
                                 <option value="{{ natureza.0 }}">{{ natureza.1 }}</option>
                                 {% endfor %}
@@ -125,24 +125,35 @@
                         <!-- Método -->
                         <div class="col-sm-4 mb-3">
                             <label for="metodo" class="form-label">Método</label>
-                            <select class="form-control" name="metodo" id="metodo">
-                                <option value="">Selecione o método</option>
+                            <select class="form-control" name="metodo" id="metodo" required>
+                                <option value="">------------</option>
                                 {% for metodo in metodos %}
                                 <option value="{{ metodo.0 }}">{{ metodo.1 }}</option>
                                 {% endfor %}
                             </select>
                         </div>
+                    </div>
 
-                        <!-- Instrumento -->
-                        <div class="col-sm-6 mb-3">
-                            <label for="metodo" class="form-label">Instrumento substituido</label>
-                            <select class="form-control" name="metodo" id="metodo">
-                                <option value="">Selecione o instrumento que substituirá o atual</option>
-                                {% for instrumento in instrumentos %}
-                                <option value="{{instrumento.tag}}">{{instrumento.tag}}</option>
-                                {% endfor %}
-                            </select>
-                        </div>
+                    <div id="campo-novo-instrumento">
+                        <hr>
+                        <p><code style="color: #001dff;" id="descricao-instrumento-substituido">Atualmente, Luan está responsável pelo instrumento. Gostaria de designar um novo instrumento para ele?</code></p>
+                        <div class="row">
+                            <div class="col-sm-6 mb-3">
+                                <label for="validacao-de-substituicao" class="form-label">Instrumento será substituído?</label>
+                                <select class="form-control" name="validacao-de-substituicao" id="validacao-de-substituicao" required>
+                                    <option value="Não">Não</option>
+                                    <option value="Sim">Sim</option>
+                                </select>
+                            </div>
+
+                            <!-- Instrumento -->
+                            <div class="col-sm-6 mb-3" id="col-instrumento-substituira-envio">
+                                <label for="instrumento-substituira-envio" class="form-label">Instrumento</label>
+                                <select class="form-control" name="instrumento-substituira-envio" id="instrumento-substituira-envio">
+
+                                </select>
+                            </div>    
+                        </div>                      
                     </div>
 
                     <!-- Botão de Envio -->
@@ -505,8 +516,9 @@
         </div>
         <form id="statusInstrumentoSubstituicao">
             <div class="modal-body">
-                <input type="hidden" name="tag-instrumento-status-substituicao" id="tag-instrumento-status-substituicao">
-                <div class="row mb-3 align-items-end">
+                <input type="hidden" name="tag-instrumento-status-substituido" id="tag-instrumento-status-substituido">
+                <input type="hidden" name="responsavel-id" id="responsavel-id">
+                <div class="row mb-3 align-items-baseline">
                     <div class="col-sm-6 mb-3 col-instrumento-status-substituicao">
                         <!-- Nome do responsável -->
                         <label for="nome-status">Responsável</label>
@@ -520,11 +532,8 @@
                     <div class="col-sm-6 mb-3 col-instrumento-status-substituicao">
                         <!-- Data de entrega -->
                         <label for="instrumento-status-substituicao">Será substituido por qual instrumento?</label>
-                        <select class="form-control" name="instrumento-status-substituicao" id="instrumento-status-substituicao">
-                            <option value="">-------</option>
-                            {% for instrumento in instrumentos %}
-                            <option value="{{instrumento.tag}}">{{instrumento.tag}}</option>
-                            {% endfor %}
+                        <select class="form-control" name="instrumento-status-substituicao" id="instrumento-status-substituicao" required>
+
                         </select>
                     </div>
                     <div class="col-sm-6 mb-3">

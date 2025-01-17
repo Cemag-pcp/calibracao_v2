@@ -128,13 +128,13 @@ $(document).ready(function () {
                     } else if (row.status_calibracao === 'recebido' && todos_certificados_true) {
                         buttons += `<li><hr class="dropdown-divider"></li>
                                     <li><p class="dropdown-header">Status: A Enviar</p></li>
-                                    <li><a class="dropdown-item" style="cursor:pointer"  onclick="enviarCalibracao('${row.tag}','${row.ponto_pk}')">
+                                    <li><a class="dropdown-item" style="cursor:pointer"  onclick="enviarCalibracao('${row.tag}','${row.ponto_pk}','${row.responsavel.matriculaNome}')">
                                         Enviar
                                     </a></li>`;
                     } else {
                         buttons += `<li><hr class="dropdown-divider"></li>
                                     <li><p class="dropdown-header">Status: A Enviar</p></li>
-                                    <li><a class="dropdown-item" style="cursor:pointer"  onclick="enviarCalibracao('${row.tag}','${row.ponto_pk}')">
+                                    <li><a class="dropdown-item" style="cursor:pointer"  onclick="enviarCalibracao('${row.tag}','${row.ponto_pk}','${row.responsavel.matriculaNome}')">
                                         Enviar
                                     </a></li>`;
                     }

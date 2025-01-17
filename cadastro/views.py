@@ -341,11 +341,60 @@ def substituir_instrumento(request):
         try:
             with transaction.atomic():
                 data = json.loads(request.body)
-
                 print(data)
+                id_responsavel = data['responsavel-id']
+                tag_instrumento_status_substituido = data['tag-instrumento-status-substituido']
+                data_substituicao = data['data-substituicao']
+                instrumento_substituira = data['instrumento_substituira']
+
+                instrumento = InfoInstrumento.objects.filter(id=tag_instrumento_status_substituido).first()
+
+                instrumento.status_instrumento = 'danificado'
+                instrumento.save()
+
+                PontoCalibracao.objects.filter(instrumento=instrumento).update(status_ponto_calibracao='inativo')
+
+                if id_responsavel and id_responsavel != 'null':
+                    novo_instrumento = InfoInstrumento.objects.filter(id=instrumento_substituira).first()
+                    funcionario = Funcionario.objects.filter(id=id_responsavel).first()
+
+                    ultima_assinatura = AssinaturaInstrumento.objects.filter(assinante=funcionario).order_by('-data_assinatura').first()
+                    foto_assinatura = ultima_assinatura.foto_assinatura if ultima_assinatura else None
+
+                    # Criar AssinaturaInstrumento
+                    AssinaturaInstrumento.objects.create(
+                        instrumento=novo_instrumento,
+                        assinante=funcionario,
+                        foto_assinatura=foto_assinatura,
+                        motivo='Entrega',
+                        data_entrega=data_substituicao
+                    )
+
+                    designacao = DesignarInstrumento.objects.filter(instrumento_escolhido=instrumento).first()
+                    DesignarInstrumento.objects.filter(pk=designacao.pk).delete()
+
+                    DesignarInstrumento.objects.create(
+                        instrumento_escolhido=novo_instrumento,
+                        responsavel=funcionario,
+                        data_entrega_funcionario=data_substituicao
+                    )
+
+                    StatusInstrumento.objects.create(
+                        funcionario=funcionario,
+                        instrumento=instrumento,
+                        motivo='substituição',
+                        data_entrega=data_substituicao
+                    )
 
                 return JsonResponse({'status': 'success',}, status=200)
         except json.JSONDecodeError:
             return JsonResponse({'status': 'error', 'message': 'Erro ao processar o JSON enviado'}, status=400)
         except Exception as e:
             return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+    else: 
+        assigned_instrument_ids = DesignarInstrumento.objects.values_list('instrumento_escolhido_id', flat=True)
+        unassigned_instruments = InfoInstrumento.objects.exclude(id__in=assigned_instrument_ids).filter(status_instrumento='ativo').values(
+            'id', 'tag'
+        )
+        print(unassigned_instruments)
+        return JsonResponse(list(unassigned_instruments), safe=False)
