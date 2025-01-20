@@ -67,7 +67,9 @@ $(document).ready(function () {
                 orderable: true,
                 render: function(data, type, row) {
                     console.log(row)
-                    if (row.responsavel.matriculaNome === null) {
+                    if (row.status_calibracao === 'enviado') {
+                        return ``
+                    } else if (row.responsavel.matriculaNome === null) {
                         return `<button class="btn badge btn-secondary btn-sm" onclick="abrirModalEscolherResponsavel('${row.tag}')">Escolher responsável</button>`;
                     } else {
                         return `<span class="btn badge btn-primary" onclick="visualizarResponsavel('${row.tag}','${row.responsavel.id}','${row.responsavel.dataEntrega}')">${row.responsavel.matriculaNome}</span>`;
@@ -99,22 +101,27 @@ $(document).ready(function () {
                                     </a></li>
                     `; 
 
-                    buttons +=`<li><hr class="dropdown-divider"></li>
-                                    <li><p class="dropdown-header">Item</p></li>`
 
-                    if(row.responsavel.id !== null) {
+                    if (row.status_calibracao !== 'enviado') {
+                        buttons +=`<li>
+                                        <hr class="dropdown-divider">
+                                    </li>
+                                    <li>
+                                        <p class="dropdown-header">Item</p>
+                                    </li>`
+                        if(row.responsavel.id !== null) {
+                            buttons += `<li>
+                                            <a class="dropdown-item" style="cursor:pointer"  onclick="alterarResponsavel('${row.tag}','${row.responsavel.id}')">
+                                                Alterar Responsável
+                                            </a>
+                                        </li>`;
+                        }    
                         buttons += `<li>
-                                        <a class="dropdown-item" style="cursor:pointer"  onclick="alterarResponsavel('${row.tag}','${row.responsavel.id}')">
-                                            Alterar Responsável
-                                        </a>
-                                    </li>`;
+                            <a class="dropdown-item" style="cursor:pointer"  onclick="substituicaoInstrumento('${row.tag}','${row.responsavel.id}','${row.id}')">
+                                Substituir
+                            </a>
+                        </li>`;
                     }
-
-                    buttons += `<li>
-                                <a class="dropdown-item" style="cursor:pointer"  onclick="substituicaoInstrumento('${row.tag}','${row.responsavel.id}','${row.id}')">
-                                    Substituir
-                                </a>
-                            </li>`;
 
                     if (row.status_calibracao === 'enviado') {
                         buttons += `<li><hr class="dropdown-divider"></li>
@@ -202,7 +209,12 @@ $(document).ready(function () {
                                                 ``
                                             }
                                         </div>
-                                        <div><button class="btn badge btn-secondary btn-sm" onclick="ultimaAnalise('${p.ultimo_envio_pk}','${d.tag}','${p.ponto_pk}')">Última análise</button></div>
+                                        <div>
+                                            ${p.analise_certificado ? 
+                                            `<button class="btn badge btn-secondary btn-sm" onclick="ultimaAnalise('${p.ultimo_envio_pk}','${d.tag}','${p.ponto_pk}')">Última análise</button>`:
+                                            `<button class="btn badge btn-secondary btn-sm">Instrumento não possui análise</button>`
+                                            }
+                                        </div>
                                     </div>
                                 </div>
                             </div>

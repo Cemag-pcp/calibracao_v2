@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block links %}
+    <link href="{% static 'css/timeline.css' %}" rel="stylesheet">
+{% endblock %}
+
+{% block content %}
+
+
+<div class="d-flex justify-content-between mb-3">
+    <h2>Plano Mestre</h2>
+    <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#designarMaisDeUmInstrumento"><i class="fa-solid fa-plus"></i> Add Instrumento</button>
+</div>
+
+<table id="instrumentos-table" class="display table table-striped table-bordered">
+    <thead>
+        <tr>
+            <th>Tag</th>
+            <th>Instrumento</th>
+            <th>Marca</th>
+            <th>Status</th>
+            <th>Tempo de calibração (em dias)</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+        </tr>
+    </tbody>
+</table>
+
+{% endblock %}
+
+{% block scripts %}
+
+{% endblock %}

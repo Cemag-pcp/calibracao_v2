@@ -9,7 +9,7 @@
 
 <div class="d-flex justify-content-between mb-3">
     <h2>Plano Mestre</h2>
-    <button class="btn btn-primary"><i class="fa-solid fa-plus"></i> Adicionar Instrumentos</button>
+    <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#designarMaisDeUmInstrumento"><i class="fa-solid fa-plus"></i> Designar mais de um instrumento por funcionário</button>
 </div>
 
 <table id="instrumentos-table" class="display table table-striped table-bordered">
@@ -583,6 +583,50 @@
     </div>
   </div>
 
+<div class="modal fade" id="designarMaisDeUmInstrumento" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-labelledby="designarMaisDeUmInstrumentoLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h1 class="modal-title fs-5" id="designarMaisDeUmInstrumentoLabel">Designar mais de um instrumento por funcionário</h1>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row mb-3">
+                    <div class="col-sm-12">
+                        <label for="">Funcionário</label>
+                        <select class="form-control" name="" id="">
+                            <option value="">-------</option>
+                            {% for funcionario in funcionarios %}
+                                <option value="{{funcionario.id}}">{{funcionario.matricula}} - {{funcionario.nome}}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div class="row mb-3 designar-varios-instrumentos">
+                    <div class="col-sm-12">
+                        <label for="">Instrumento</label>
+                        <select class="form-control" name="" id="">
+
+                        </select>
+                    </div>
+                </div>
+                <div class="col-sm-12 mb-4" id="add_remove_cause" style="display: flex;justify-content: space-between; align-items: center;">
+                    <a class="btn btn-danger" id="removeButton" style="font-size: 10px;" disabled>Remover causa</a>
+                    <a class="btn btn-primary" id="addButton" style="font-size: 10px;">Adicionar causa</a>
+                </div>
+                <div class="row mb-3" id="signature-add-instrumentos">
+                    <label for="signature-canvas-add-instrumentos">Assinatura</label>
+                    <canvas id="signature-canvas-add-instrumentos" style="border: 1px solid #000; width: 90%; height: 200px; margin: 0 auto;"></canvas>
+                </div>   
+            </div>
+            <div class="modal-footer d-flex justify-content-between">
+                <button class="btn btn-secondary">Limpar Assinatura</button>
+                <button type="submit" class="btn btn-primary">Confirmar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 {% endblock %}
 
 {% block scripts %}
@@ -590,4 +634,5 @@
     <script src="{% static 'js/data-table-pc.js' %}"></script>
     <script src="{% static 'js/acoes-pc.js' %}"></script>
     <script src="{% static 'js/signature.js' %}"></script>
+    <script src="{% static 'js/add-varios-instrumentos.js' %}"></script>
 {% endblock %}

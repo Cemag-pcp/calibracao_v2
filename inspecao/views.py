@@ -29,9 +29,11 @@ def enviar_view(request):
                 laboratorio_object = get_object_or_404(Laboratorio, pk=laboratorio)
                 instrumento_object = get_object_or_404(InfoInstrumento, tag=tag)
 
-                if validacao_de_substituicao == 'Sim':
-                    designicao = get_object_or_404(DesignarInstrumento, instrumento_escolhido=instrumento_object)
+                designicao = DesignarInstrumento.objects.filter(instrumento_escolhido=instrumento_object).first()
+                if designicao:
                     designicao.delete()
+
+                if validacao_de_substituicao == 'Sim':
 
                     novo_instrumento = InfoInstrumento.objects.filter(id=instrumento_substituira_envio).first()
                     funcionario = Funcionario.objects.filter(id=designicao.responsavel.id).first()

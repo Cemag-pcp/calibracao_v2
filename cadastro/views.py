@@ -1,5 +1,6 @@
 from django.shortcuts import render, get_object_or_404
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
+from django.db.models import Max
 from django.http import JsonResponse
 from django.db.models import Q
 from django.db import transaction
@@ -47,6 +48,7 @@ def home(request):
                                          'instrumentos':instrumento})
 
 def instrumentos_data(request):
+
     hoje = datetime.now().date()
 
     # Coleta os instrumentos
@@ -58,6 +60,10 @@ def instrumentos_data(request):
 
         # Adiciona os detalhes dos pontos de calibração
         pontos_calibracao = instrumento.pontos_calibracao.all()  # Obtém todos os pontos relacionados ao instrumento
+
+        # Obtém a última assinatura do instrumento
+        ultima_assinatura = AssinaturaInstrumento.objects.filter(instrumento=instrumento).order_by('-data_assinatura').first()
+        ultimo_assinante = ultima_assinatura.assinante if ultima_assinatura else None
 
         for ponto in pontos_calibracao:
             # Obtém o último envio específico para o ponto de calibração
@@ -116,6 +122,10 @@ def instrumentos_data(request):
                     'status_calibracao': ultimo_envio.status if ultimo_envio else None,
                     'tempo_calibracao': instrumento.tempo_calibracao,
                     'responsavel': {'id': responsavel_id, 'matriculaNome': responsavel, 'dataEntrega': responsavel_data_entrega},
+                    'ultimo_assinante': {
+                        'nome': ultimo_assinante.nome if ultimo_assinante else None,
+                        'id': ultimo_assinante.id if ultimo_assinante else None
+                    },
                     'pontos_calibracao': []
                 }
 
@@ -398,3 +408,11 @@ def substituir_instrumento(request):
         )
         print(unassigned_instruments)
         return JsonResponse(list(unassigned_instruments), safe=False)
+
+def historico_instrumento(request):
+
+    return render(request, 'historico.html')
+
+def cadastrar_instrumento(request):
+
+    return render(request, 'cadastro.html')
