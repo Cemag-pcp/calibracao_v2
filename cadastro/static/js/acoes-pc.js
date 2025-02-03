@@ -42,48 +42,6 @@ document.getElementById('nome-editar-responsavel').addEventListener('change', fu
     toggleRowVisibility(this.value !== "");
 });
 
-
-// function abrirHistoricoModal(tag,pontoCalibracao,pontoDescricao) {
-//     fetch(`/instrumento/historico/${tag}/${pontoCalibracao}/`)
-//         .then(response => response.json())
-//         .then(data => {
-
-//             // Atualiza o título do modal
-//             document.getElementById('modal-title-historico').textContent = `Histórico do Instrumento: ${tag} - ${pontoDescricao}`;
-
-//             // Seleciona o contêiner do corpo do modal
-//             const timelineContainer = document.getElementById('modal-body-historico');
-
-//             // Limpa o conteúdo anterior
-//             timelineContainer.innerHTML = '';
-
-//             // Constrói a timeline
-//             const timelineHtml = data.historico.map(evento => `
-//                 <div class="timeline-event">
-//                     <div class="timeline-event-content">
-//                         <div class="timeline-event-title">${evento.tipo} - ${evento.data}</div>
-//                         <div class="timeline-event-body">${evento.descricao}</div>
-//                     </div>
-//                 </div>
-//             `).join('');
-
-//             // Insere a timeline no modal
-//             timelineContainer.innerHTML = `
-//                 <div class="timeline">
-//                     ${timelineHtml}
-//                 </div>
-//             `;
-
-//             // Exibe o modal usando Bootstrap
-//             const modal = new bootstrap.Modal(document.getElementById('modal-historico'));
-//             modal.show();
-//         })
-//         .catch(error => {
-//             console.error('Erro ao carregar o histórico:', error);
-//             alert('Erro ao carregar o histórico.');
-//         });
-// }
-
 function enviarCalibracao(tag,pontoCalibracao,nomeResponsavel) {
 
     document.getElementById('modal-title-enviar').textContent = `Enviar instrumento: ${tag}`;

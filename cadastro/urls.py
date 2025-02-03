@@ -16,5 +16,9 @@ urlpatterns = [
     path('escolher-responsavel/', views.escolher_responsavel, name='escolher_responsavel'),
     path('editar-responsavel/', views.editar_responsavel, name='editar_responsavel'),
 
-    path('historico/', views.historico_instrumento, name='historico-instrumento'),
+    path('historico/', views.historico, name='historico'),
+    path('historico/<int:id>/', views.historico_instrumento, name='historico-instrumento'),
+    path('historico/datatable/<int:id>/', views.historico_datatable_instrumento, name='historico-datatable-instrumento'),
+
+    path('designar-mais-instrumentos/', views.designar_instrumentos, name='designar-instrumentos'),
 ]

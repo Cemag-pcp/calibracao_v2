@@ -1,6 +1,6 @@
-function filtrarOpcoes() {
-    const inputValue = document.getElementById('filterInput').value.toLowerCase();
-    const datalist = document.getElementById('encodings');
+function filtrarOpcoes(input, select) {
+    const inputValue = document.getElementById(input).value.toLowerCase();
+    const datalist = document.getElementById(select);
     const options = Array.from(datalist.querySelectorAll('option'));
 
     // Filtra as opções que começam com o valor digitado e ordena lexicograficamente
@@ -20,10 +20,4 @@ function filtrarOpcoes() {
       option.style.display = '';
       option.disabled = false;
     });
-  }
-
-  // Adiciona os eventos para filtrar as opções
-  const inputElement = document.getElementById('filterInput');
-  inputElement.addEventListener('input', filtrarOpcoes);
-  inputElement.addEventListener('click', filtrarOpcoes);
-  inputElement.addEventListener('focus', filtrarOpcoes);
+}

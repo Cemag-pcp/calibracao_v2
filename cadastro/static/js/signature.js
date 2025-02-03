@@ -9,6 +9,10 @@ document.addEventListener('DOMContentLoaded', function () {
     var canvasEdicao = document.getElementById('signature-canvas-edicao');
     var signaturePadEdicao = new SignaturePad(canvasEdicao);
 
+    const formDesignarInstrumentos = document.getElementById('form-designar-varios-instrumentos');
+    var canvasDesignarVariosInstrumentos = document.getElementById('signature-canvas-designar-varios-instrumentos');
+    var signatureDesignarVariosInstrumentos = new SignaturePad(canvasDesignarVariosInstrumentos);
+
     // Redimensiona o canvas para o tamanho adequado
     function resizeCanvas(canvas, signaturePad) {
         var ratio = Math.max(window.devicePixelRatio || 1, 1);
@@ -26,6 +30,10 @@ document.addEventListener('DOMContentLoaded', function () {
         resizeCanvas(canvasEdicao, signaturePadEdicao);
     });
 
+    $('#modalDesignarMaisDeUmInstrumento').on('shown.bs.modal', function () {
+        resizeCanvas(canvasDesignarVariosInstrumentos, signatureDesignarVariosInstrumentos);
+    });
+
     // Capturar o envio do primeiro formulário
     formResponsavel.addEventListener('submit', async (event) => {
         event.preventDefault();
@@ -40,11 +48,16 @@ document.addEventListener('DOMContentLoaded', function () {
     
         if (!nomeResponsavel) {
             // Se o campo 'nome-editar-responsavel' estiver vazio, ignore a verificação da assinatura
-            await enviarFormularioSemVerificarAssinatura(formEditarResponsavel, '/editar-responsavel/');
+            await enviarFormularioSemAssinatura(formEditarResponsavel, '/editar-responsavel/');
         } else {
             // Se o campo 'nome-editar-responsavel' não estiver vazio, verificar a assinatura
             await enviarFormularioComAssinatura(formEditarResponsavel, signaturePadEdicao, '/editar-responsavel/');
         }
+    });
+
+    formDesignarInstrumentos.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        await enviarFormularioComAssinatura(formDesignarInstrumentos, signatureDesignarVariosInstrumentos, '/designar-mais-instrumentos/');
     });
 
     // Função para enviar o formulário com a assinatura
@@ -60,8 +73,25 @@ document.addEventListener('DOMContentLoaded', function () {
             return;
         }
 
+        if (url === '/designar-mais-instrumentos/') {
+            const instrumentosSelecionados = [];
+            document.querySelectorAll('.instrumento-designado').forEach(select => {
+                if (select.value) {
+                    instrumentosSelecionados.push(select.value);
+                }
+            });
+
+            if (instrumentosSelecionados.length === 0) {
+                alert("Por favor, selecione pelo menos um instrumento.");
+                return;
+            }
+
+            jsonData['instrumentos'] = instrumentosSelecionados;  // Adiciona os instrumentos ao JSON
+        }
+
         jsonData['signature'] = signaturePad.toDataURL();
 
+        console.log(jsonData)
         try {
             const response = await fetch(url, {
                 method: 'POST',
@@ -101,7 +131,7 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 
-    async function enviarFormularioSemVerificarAssinatura(form, url) {
+    async function enviarFormularioSemAssinatura(form, url) {
         const formData = new FormData(form);
         const jsonData = {};
         formData.forEach((value, key) => {
@@ -154,5 +184,9 @@ document.addEventListener('DOMContentLoaded', function () {
     // Adicionar botão para limpar assinatura no segundo formulário, se necessário
     document.getElementById('clear-signature-edicao').addEventListener('click', function () {
         signaturePadEdicao.clear();
+    });
+
+    document.getElementById('clear-signature-add-instrumentos').addEventListener('click', function () {
+        signatureDesignarVariosInstrumentos.clear();
     });
 });

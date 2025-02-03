@@ -32,12 +32,19 @@
 {% endblock %}
 
 {% block scripts %}
-    <script src="{% static 'js/filtrar-ficha-funcionarios.js' %}"></script>
+    <script src="{% static 'js/filtro/filtrar-opcoes.js' %}"></script>
+    <script src="{% static 'js/filtro/filtrar-ficha-funcionarios.js' %}"></script>
     <script>
         document.getElementById('filtrar_funcionario').addEventListener('click', function() {
-            var input = document.getElementById('filterInput');
-            var datalist = document.getElementById('encodings').options;
-            var selectedId;
+            let input = document.getElementById('filterInput');
+            let datalist = document.getElementById('encodings').options;
+            let selectedId;
+            let downloadIcon = document.querySelector('.fa-download');
+            let spinnerBorder = document.querySelector('.spinner-border');
+            this.disabled = true;
+            downloadIcon.style.display = 'none';
+            console.log(downloadIcon.classList)
+            spinnerBorder.classList.remove('d-none');
     
             for (var i = 0; i < datalist.length; i++) {
                 if (datalist[i].value === input.value) {
@@ -57,14 +64,28 @@
                         link.download = `Termo de Responsabilidade Equipamentos de Medição_Atualizado.xlsx`;  // Nome do arquivo para o download
                         link.click();  // Simula o clique para iniciar o download
 
+                        this.disabled = false;
+                        downloadIcon.style.display = 'block';
+                        console.log(downloadIcon.classList)
+                        spinnerBorder.classList.add('d-none');
+                        
                         alert('Ficha gerada com sucesso!');
                     })
                     .catch(error => {
                         console.error('Erro ao gerar a ficha:', error);
+
+                        this.disabled = false;
+                        downloadIcon.style.display = 'block';
+                        console.log(downloadIcon.classList)
+                        spinnerBorder.classList.add('d-none');
+
                         alert('Funcionário não encontrado.');
                     });
             } else {
                 alert('Funcionário não encontrado. Por favor, selecione uma opção válida.');
+                this.disabled = false;
+                downloadIcon.style.display = 'block';
+                spinnerBorder.classList.add('d-none');
             }
         });
     </script>

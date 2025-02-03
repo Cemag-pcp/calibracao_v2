@@ -30,6 +30,7 @@ def enviar_view(request):
                 instrumento_object = get_object_or_404(InfoInstrumento, tag=tag)
 
                 designicao = DesignarInstrumento.objects.filter(instrumento_escolhido=instrumento_object).first()
+
                 if designicao:
                     designicao.delete()
 
@@ -46,7 +47,7 @@ def enviar_view(request):
                         instrumento=novo_instrumento,
                         assinante=funcionario,
                         foto_assinatura=foto_assinatura,
-                        motivo='Entrega - Temporária',
+                        motivo='Entrega',
                         data_entrega=data_envio
                     )
 
@@ -59,7 +60,22 @@ def enviar_view(request):
                     StatusInstrumento.objects.create(
                         funcionario=funcionario,
                         instrumento=instrumento_object,
-                        motivo='substituição',
+                        motivo='substituição - calibração',
+                        data_entrega=data_envio,
+                        observacoes='calibração'
+                    )
+
+                elif validacao_de_substituicao == 'Não' and designicao != None:
+
+                    funcionario = Funcionario.objects.filter(id=designicao.responsavel.id).first()
+
+                    ultima_assinatura = AssinaturaInstrumento.objects.filter(assinante=funcionario).order_by('-data_assinatura').first()
+                    foto_assinatura = ultima_assinatura.foto_assinatura if ultima_assinatura else None
+
+                    StatusInstrumento.objects.create(
+                        funcionario=funcionario,
+                        instrumento=instrumento_object,
+                        motivo='devolução',
                         data_entrega=data_envio
                     )
 

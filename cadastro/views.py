@@ -10,6 +10,7 @@ from inspecao.models import Envio, Laboratorio, AnaliseCertificado
 from ficha.models import AssinaturaInstrumento, StatusInstrumento
 from .models import InfoInstrumento, HistoricoInstrumento, Funcionario, DesignarInstrumento, Operadores, PontoCalibracao
 from cadastro.utils import *
+from django.http import HttpResponse, JsonResponse
 
 from datetime import datetime
 import json
@@ -162,6 +163,64 @@ def instrumentos_data(request):
     }
 
     return JsonResponse(data)
+
+def designar_instrumentos(request):
+    if request.method == 'POST':
+        with transaction.atomic():
+            try:
+                data = json.loads(request.body)
+                
+                funcionario_id = data.get('funcionario-designar-varios-instrumentos')
+                instrumentos_ids = list(set(data.get('instrumentos', [])))
+                assinatura_base64 = data.get('signature')
+                data_entrega = data.get('data-designar-varios-instrumentos')
+
+                if not funcionario_id or not instrumentos_ids or not assinatura_base64 or not data_entrega:
+                    return JsonResponse({"sucesso": False, "erro": "Dados incompletos"}, status=400)
+
+                funcionario = Funcionario.objects.get(id=funcionario_id)
+
+                data_entrega = datetime.fromisoformat(data_entrega).date()
+
+                format, imgstr = assinatura_base64.split(';base64,') 
+                ext = format.split('/')[-1]  # Extensão do arquivo, como 'png', 'jpg', etc.
+                
+                # Gerar um UUID para o nome do arquivo
+                file_name = f"{uuid.uuid4()}.{ext}"
+
+                # Criar o arquivo a partir da string base64
+                assinatura_path = ContentFile(base64.b64decode(imgstr), name=file_name)
+
+                for instrumento_id in instrumentos_ids:
+                    instrumento = InfoInstrumento.objects.get(id=instrumento_id)
+
+                    # Criar a designação do instrumento com a data especificada
+                    DesignarInstrumento.objects.create(
+                        instrumento_escolhido=instrumento,
+                        responsavel=funcionario,
+                        data_entrega_funcionario=data_entrega
+                    )
+
+                    # Criar a assinatura associada
+                    AssinaturaInstrumento.objects.create(
+                        instrumento=instrumento,
+                        assinante=funcionario,
+                        foto_assinatura=assinatura_path,
+                        motivo='entrega'
+                    )
+
+                return JsonResponse({"sucesso": True})
+            
+            except Exception as e:
+                return JsonResponse({"sucesso": False, "erro": str(e)}, status=500)
+        
+    elif request.method == 'GET':
+        # Deve pegar todos os instrumentos que não possui designação
+        enviados_instrument_ids = Envio.objects.filter(status='enviado').values_list('instrumento_id', flat=True)
+        instrumentos = InfoInstrumento.objects.exclude(designar_instrumento__isnull = False).exclude(id__in=enviados_instrument_ids).filter(status_instrumento='ativo')
+        instrumentos_data = list(instrumentos.values('id', 'tag'))
+
+        return JsonResponse({"sucesso": True, "instrumentos": instrumentos_data})
 
 def qrcode_view(request, tag):
 
@@ -319,6 +378,8 @@ def editar_responsavel(request):
                     AssinaturaInstrumento.objects.create(
                         instrumento=instrumento_object,
                         assinante=funcionario_object,
+                        data_assinatura=data_entrega,
+                        data_entrega=data_entrega,
                         foto_assinatura=signature_file,
                         motivo=motivo_editar_responsavel
                     )
@@ -392,8 +453,9 @@ def substituir_instrumento(request):
                     StatusInstrumento.objects.create(
                         funcionario=funcionario,
                         instrumento=instrumento,
-                        motivo='substituição',
-                        data_entrega=data_substituicao
+                        motivo='substituição - danificado',
+                        data_entrega=data_substituicao,
+                        observacoes='danificado'
                     )
 
                 return JsonResponse({'status': 'success',}, status=200)
@@ -403,15 +465,91 @@ def substituir_instrumento(request):
             return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
     else: 
         assigned_instrument_ids = DesignarInstrumento.objects.values_list('instrumento_escolhido_id', flat=True)
-        unassigned_instruments = InfoInstrumento.objects.exclude(id__in=assigned_instrument_ids).filter(status_instrumento='ativo').values(
+        enviados_instrument_ids = Envio.objects.filter(status='enviado').values_list('instrumento_id', flat=True)
+        unassigned_instruments = InfoInstrumento.objects.exclude(id__in=assigned_instrument_ids).exclude(id__in=enviados_instrument_ids).filter(status_instrumento='ativo').values(
             'id', 'tag'
         )
         print(unassigned_instruments)
         return JsonResponse(list(unassigned_instruments), safe=False)
 
-def historico_instrumento(request):
+def historico(request):
 
-    return render(request, 'historico.html')
+    instrumentos = InfoInstrumento.objects.all()
+
+    return render(request, 'historico.html', {'instrumentos': instrumentos})
+
+def historico_instrumento(request, id):
+    
+    if request.method == 'GET':
+        # Obtém o instrumento pelo ID ou retorna erro 404 se não existir
+        instrumento = get_object_or_404(InfoInstrumento, id=id)
+
+        # Obtém os pontos de calibração relacionados ao instrumento
+        pontos_calibracao = instrumento.pontos_calibracao.all()
+
+        designacao = instrumento.designar_instrumento.first()  # Pegamos apenas o primeiro registro (caso exista)
+        responsavel = designacao.responsavel.nome if designacao and designacao.responsavel else None
+
+        STATUS_INSTRUMENTO_MAP = {
+            'ativo': 'Ativo',
+            'inativo': 'Inativo',
+            'em_uso': 'Em uso',
+            'desuso': 'Desuso',
+            'danificado': 'Danificado',
+        }
+
+        # Serializa os dados do instrumento
+        instrumento_data = {
+            "id": instrumento.id,
+            "tag": instrumento.tag,
+            "tipo_equipamento": instrumento.tipo_instrumento.nome,  # Ajuste se necessário
+            "marca": instrumento.marca.nome,  # Ajuste se necessário
+            "status_instrumento": STATUS_INSTRUMENTO_MAP.get(instrumento.status_instrumento, ""),
+            "tempo_calibracao": instrumento.tempo_calibracao,
+            "ultima_calibracao": instrumento.ultima_calibracao.strftime("%Y-%m-%d"),
+            "proxima_calibracao": instrumento.proxima_calibracao.strftime("%Y-%m-%d") if instrumento.proxima_calibracao else None,
+            "responsavel": responsavel,
+        }
+
+        pontos_data = []
+        # Serializa os dados dos pontos de calibração
+        for ponto in pontos_calibracao:
+            ultimo_envio = Envio.objects.filter(instrumento=instrumento, ponto_calibracao=ponto).order_by('-id').first()
+            analise_certificado = AnaliseCertificado.objects.filter(envio=ultimo_envio).first() if ultimo_envio else None
+
+            pontos_data.append({
+                "id": ponto.id,
+                "descricao": ponto.descricao,
+                "faixa_nominal": ponto.faixa_nominal,
+                "unidade": ponto.unidade,
+                "tolerancia_admissivel": ponto.tolerancia_admissivel,
+                "status": ponto.status_ponto_calibracao,
+                "analise_certificado": analise_certificado.analise_certificado if analise_certificado else None
+            })
+
+        # Retorna os dados como JSON
+        return JsonResponse({
+            "instrumento": instrumento_data,
+            "pontos_calibracao": pontos_data,
+        })
+
+def historico_datatable_instrumento(request, id):
+
+    instrumento = get_object_or_404(InfoInstrumento, id=id)
+
+    historico_instrumento = HistoricoInstrumento.objects.filter(instrumento=instrumento)
+    historico_data = [
+        {
+            "tipo_mudanca": historico.tipo_mudanca,
+            "data_mudanca": historico.data_mudanca.strftime("%Y-%m-%d %H:%M:%S"),
+            "descricao_mudanca": historico.descricao_mudanca
+        }
+        for historico in historico_instrumento
+    ]
+             
+    return JsonResponse({
+        "historico": historico_data
+    })
 
 def cadastrar_instrumento(request):
 

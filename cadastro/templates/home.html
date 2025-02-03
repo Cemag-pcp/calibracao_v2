@@ -9,7 +9,7 @@
 
 <div class="d-flex justify-content-between mb-3">
     <h2>Plano Mestre</h2>
-    <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#designarMaisDeUmInstrumento"><i class="fa-solid fa-plus"></i> Designar mais de um instrumento por funcionário</button>
+    <button type="button" class="btn btn-primary btn-sm" id="button-modal-designarcao"><i class="fa-solid fa-plus"></i> Designar mais de um instrumento por funcionário</button>
 </div>
 
 <table id="instrumentos-table" class="display table table-striped table-bordered">
@@ -30,7 +30,7 @@
 </table>
 
 <!-- Modal para buscar qrcode -->
-<div id="modal-qrcode" class="modal fade" data-bs-backdrop="static" tabindex="-1" aria-hidden="true">
+<div id="modal-qrcode" class="modal fade" data-bs-backdrop="static" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
@@ -47,7 +47,7 @@
 </div>
 
 <!-- Modal para buscar histórico de atualizações -->
-<div id="modal-historico" class="modal fade" tabindex="-1" aria-hidden="true">
+<div id="modal-historico" class="modal fade" tabindex="-1">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
@@ -65,7 +65,7 @@
 </div>
 
 <!-- Modal para enviar p/ calibração -->
-<div id="modal-enviar" class="modal fade" data-bs-backdrop="static" tabindex="-1" aria-hidden="true">
+<div id="modal-enviar" class="modal fade" data-bs-backdrop="static" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
@@ -167,7 +167,7 @@
 </div>
 
 <!-- Modal de recebimento de calibração -->
-<div id="modal-recebimento" class="modal fade" data-bs-backdrop="static" tabindex="-1" aria-hidden="true">
+<div id="modal-recebimento" class="modal fade" data-bs-backdrop="static" tabindex="-1">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
@@ -227,7 +227,7 @@
 </div>
 
 <!-- Modal de analise da calibração -->
-<div id="modal-analise" class="modal fade" data-bs-backdrop="static" tabindex="-1" aria-hidden="true">
+<div id="modal-analise" class="modal fade" data-bs-backdrop="static" tabindex="-1">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
@@ -311,7 +311,7 @@
     </div>
 </div>
 
-<div class="modal fade" id="modal-ultima-analise" data-bs-backdrop="static" tabindex="-1" aria-labelledby="modal-title-ultima-analise" aria-hidden="true">
+<div class="modal fade" id="modal-ultima-analise" data-bs-backdrop="static" tabindex="-1" aria-labelledby="modal-title-ultima-analise">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
@@ -380,7 +380,7 @@
 
 
 <!-- Modal p/ escolher responsável -->
-<div id="modal-responsavel" class="modal fade" data-bs-backdrop="static" tabindex="-1" aria-hidden="true">
+<div id="modal-responsavel" class="modal fade" data-bs-backdrop="static" tabindex="-1">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
@@ -456,7 +456,7 @@
     </div>
 </div>
 
-<div id="modal-alterar-responsavel" class="modal fade" data-bs-backdrop="static" tabindex="-1" aria-hidden="true">
+<div id="modal-alterar-responsavel" class="modal fade" data-bs-backdrop="static" tabindex="-1">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
@@ -507,7 +507,7 @@
     </div>
 </div>
 
-<div class="modal fade" id="statusInstrumentoModal" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-labelledby="statusInstrumentoModalLabel" aria-hidden="true">
+<div class="modal fade" id="statusInstrumentoModal" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-labelledby="statusInstrumentoModalLabel">
     <div class="modal-dialog">
       <div class="modal-content">
         <div class="modal-header">
@@ -583,46 +583,51 @@
     </div>
   </div>
 
-<div class="modal fade" id="designarMaisDeUmInstrumento" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-labelledby="designarMaisDeUmInstrumentoLabel" aria-hidden="true">
+<div class="modal fade" id="modalDesignarMaisDeUmInstrumento" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-labelledby="designarMaisDeUmInstrumentoLabel">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
                 <h1 class="modal-title fs-5" id="designarMaisDeUmInstrumentoLabel">Designar mais de um instrumento por funcionário</h1>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <div class="modal-body">
-                <div class="row mb-3">
-                    <div class="col-sm-12">
-                        <label for="">Funcionário</label>
-                        <select class="form-control" name="" id="">
-                            <option value="">-------</option>
-                            {% for funcionario in funcionarios %}
+            <form id="form-designar-varios-instrumentos">
+                <div class="modal-body">
+                    <div class="row mb-3">
+                        <div class="col-sm-6">
+                            <label for="">Funcionário</label>
+                            <select class="form-control" name="funcionario-designar-varios-instrumentos" id="funcionario-designar-varios-instrumentos" required>
+                                <option value="">Selecione um funcionário</option>
+                                {% for funcionario in funcionarios %}
                                 <option value="{{funcionario.id}}">{{funcionario.matricula}} - {{funcionario.nome}}</option>
-                            {% endfor %}
-                        </select>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-sm-6">
+                            <label for="data-designar-varios-instrumentos">Data Entrega</label>
+                            <input class="form-control" type="datetime-local" name="data-designar-varios-instrumentos" id="data-designar-varios-instrumentos" required>
+                        </div>
                     </div>
-                </div>
-                <div class="row mb-3 designar-varios-instrumentos">
-                    <div class="col-sm-12">
-                        <label for="">Instrumento</label>
-                        <select class="form-control" name="" id="">
-
-                        </select>
+                    <div class="row mb-3 designar-varios-instrumentos">
+                        <div class="col-sm-12">
+                            <label for="instrumento-designado">Instrumento</label>
+                            <select class="form-control instrumento-designado" required>
+                            </select>
+                        </div>
                     </div>
+                    <div class="col-sm-12 mb-4" id="add_remove_cause" style="display: flex;justify-content: space-between; align-items: center;">
+                        <a class="btn btn-danger" id="removeButton" style="font-size: 10px;" disabled>Remover causa</a>
+                        <a class="btn btn-primary" id="addButton" style="font-size: 10px;">Adicionar causa</a>
+                    </div>
+                    <div class="row mb-3" id="signature-add-instrumentos">
+                        <label for="signature-canvas-designar-varios-instrumentos">Assinatura</label>
+                        <canvas id="signature-canvas-designar-varios-instrumentos" style="border: 1px solid #000; width: 90%; height: 200px; margin: 0 auto;"></canvas>
+                    </div>   
                 </div>
-                <div class="col-sm-12 mb-4" id="add_remove_cause" style="display: flex;justify-content: space-between; align-items: center;">
-                    <a class="btn btn-danger" id="removeButton" style="font-size: 10px;" disabled>Remover causa</a>
-                    <a class="btn btn-primary" id="addButton" style="font-size: 10px;">Adicionar causa</a>
+                <div class="modal-footer d-flex justify-content-between">
+                    <a class="btn btn-secondary" id="clear-signature-add-instrumentos">Limpar Assinatura</a>
+                    <button type="submit" class="btn btn-primary">Confirmar</button>
                 </div>
-                <div class="row mb-3" id="signature-add-instrumentos">
-                    <label for="signature-canvas-add-instrumentos">Assinatura</label>
-                    <canvas id="signature-canvas-add-instrumentos" style="border: 1px solid #000; width: 90%; height: 200px; margin: 0 auto;"></canvas>
-                </div>   
-            </div>
-            <div class="modal-footer d-flex justify-content-between">
-                <button class="btn btn-secondary">Limpar Assinatura</button>
-                <button type="submit" class="btn btn-primary">Confirmar</button>
-            </div>
+            </form>
         </div>
     </div>
 </div>
@@ -635,4 +640,5 @@
     <script src="{% static 'js/acoes-pc.js' %}"></script>
     <script src="{% static 'js/signature.js' %}"></script>
     <script src="{% static 'js/add-varios-instrumentos.js' %}"></script>
+    <script src="{% static 'js/designar-mais-instrumentos.js' %}"></script>
 {% endblock %}

@@ -13,12 +13,14 @@
             <h1 style="font-weight: 700;"><label for="">Histórico de Instrumento</label></h1>
             <p class="fw-medium" style="color: #6e6e77;">Escolha um instrumento para analisar seu histórico</p>
             <div class="input-group">
-                <input class="form-control custom-select custom-select-sm fw-semibold" list="encodings" id="filterInput" type="text" placeholder="Pesquisar instrumento..." aria-label="Pesquisar instrumento" aria-describedby="filtrar_instrumento">
-                <datalist id="encodings">
-                    
+                <input class="form-control custom-select custom-select-sm fw-semibold" list="instruments-filter" id="filterInputInstrument" type="text" placeholder="Pesquisar instrumento..." aria-label="Pesquisar instrumento" aria-describedby="filtrar_instrumento">
+                <datalist id="instruments-filter">
+                    {% for instrumento in instrumentos %}
+                        <option value="{{ instrumento.tag }}" data-id="{{ instrumento.id }}">{{ instrumento.tag }}</option>
+                    {% endfor %}
                 </datalist>
-                <button id="filtrar_funcionario" class="input-group-text btn btn-light border" type="button">
-                    <i class="fa-solid fa-search"></i>
+                <button id="filtrar_instrumento" class="input-group-text btn btn-light border" type="button">
+                    <i id="searchIcon" class="fa-solid fa-search"></i>
                     <span class="spinner-border spinner-border-sm d-none" aria-hidden="true"></span>
                     <span class="visually-hidden" role="status">Loading...</span>
                 </button>
@@ -27,58 +29,45 @@
     </div>
     <div class="row justify-content-center" style="margin-bottom: 50px;">
         <div class="col-12 col-sm-12 col-md-8 col-lg-8 col-xl-6 border p-3">
-            <h5>Instrumento: PAQ-001</h5>
+            <h5 id="cabecalho_historico_instrumento">Instrumento:</h5>
             <div class="row mt-3">
                 <div class="col-sm-4">
-                    <label for="" style="color: gray; font-weight: 400;">Responsável</label>
-                    <p style="font-weight: 500;">Saul Santos</p>
+                    <label for="responsavel_historico" style="color: gray; font-weight: 400;">Responsável</label>
+                    <p id="responsavel_historico" style="font-weight: 500;"></p>
                 </div>
                 <div class="col-sm-4">
-                    <label for="" style="color: gray; font-weight: 400;">Ult. Status</label>
-                    <p style="font-weight: 500;">Aprovado</p>
+                    <label for="status_equip_historico" style="color: gray; font-weight: 400;">Status Equipamento</label>
+                    <p id="status_equip_historico" style="font-weight: 500;"></p>
                 </div>
                 <div class="col-sm-4">
-                    <label for="" style="color: gray; font-weight: 400;">Status Equipamento</label>
-                    <p style="font-weight: 500;">Ativo</p>
+                    <label for="tipo_equip_historico" style="color: gray; font-weight: 400;">Tipo do Equipamento</label>
+                    <p id="tipo_equip_historico" style="font-weight: 500;"></p>
                 </div>
             </div>
             <div class="row">
                 <div class="col-sm-4">
-                    <label for="" style="color: gray; font-weight: 400;">Ult. Relatório</label>
-                    <p style="font-weight: 500;">Relatório</p>
+                    <label for="ult_calib_historico" style="color: gray; font-weight: 400;">Ult. Calibração</label>
+                    <p id="ult_calib_historico" style="font-weight: 500;"></p>
                 </div>
                 <div class="col-sm-4">
-                    <label for="" style="color: gray; font-weight: 400;">Ult. Calibração</label>
-                    <p style="font-weight: 500;">20/01/2025</p>
+                    <label for="prox_calib_historico" style="color: gray; font-weight: 400;">Próx. Calibração</label>
+                    <p id="prox_calib_historico" style="font-weight: 500;"></p>
                 </div>
                 <div class="col-sm-4">
-                    <label for="" style="color: gray; font-weight: 400;">Próx. Calibração</label>
-                    <p style="font-weight: 500;">20/01/2025</p>
+                    <label for="tempo_calib_historico" style="color: gray; font-weight: 400;">Tempo de Calibração</label>
+                    <p id="tempo_calib_historico" style="font-weight: 500;"></p>
                 </div>
             </div>
         </div>
     </div>
     <div class="row justify-content-center accordion accordion-flush" style="margin-bottom: 50px;">
         <div class="col-12 col-sm-12 col-md-8 col-lg-8 col-xl-6 accordion-item ">
-            <div class="d-flex justify-content-between align-items-center border p-3 accordion-header">
-                <h6>Tensão Contínua</h6>
-                <div style="display: flex; gap: 20px; align-items: center;">
-                    <strong class="status-approved" style="font-size: 12px;">Aprovado</strong>
-
-                </div>
-            </div>
-            <div class="d-flex justify-content-between align-items-center border p-3">
-                <h6>Tensão Alternada</h6>
-                <div style="display: flex; gap: 20px; align-items: center;">
-                    <strong class="status-peding" style="font-size: 12px;">Pendente</strong>
-
-                </div>
-            </div>
-            <div class="d-flex justify-content-between align-items-center border p-3">
-                <h6>Tensão Alternada</h6>
-                <div style="display: flex; gap: 20px; align-items: center;">
-                    <strong class="status-declined" style="font-size: 12px;">Reprovado</strong>
-
+            <div id="pontos_calibracao_container">
+                <div class="d-flex justify-content-between align-items-center border p-3 accordion-header">
+                    <h6 id="ponto_de_calibracao"></h6>
+                    <div style="display: flex; gap: 20px; align-items: center;">
+                        <strong id="status_ponto_de_calibracao" class="status-approved" style="font-size: 12px;">Status</strong>
+                    </div>
                 </div>
             </div>
         </div>
@@ -89,14 +78,15 @@
                 <thead>
                     <tr>
                         <th>Data</th>
+                        <th>Tipo</th>
                         <th>Descrição - Histórico</th>
                     </tr>
                 </thead>
                 <tbody>
                     <tr>
-                        <td>20/01/2025</td>
-                        <td>Instrumento analisado por 0001 - operador 1 dia 2025-01-20.
-                            Resultado da análise: aprovado.</td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
                     </tr>
                 </tbody>
             </table>
@@ -107,5 +97,9 @@
 {% endblock %}
 
 {% block scripts %}
+
+<script src="{% static 'js/filtro/filtrar-opcoes.js' %}"></script>
+<script src="{% static 'js/filtro/filtrar-instrumento.js' %}"></script>
+<script src="{% static 'js/historico.js' %}"></script>
 
 {% endblock %}
