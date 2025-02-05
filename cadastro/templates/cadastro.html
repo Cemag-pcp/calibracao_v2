@@ -24,18 +24,38 @@
         </tr>
     </thead>
     <tbody>
+        {% for instrumento in instrumentos_cadastrados %}
         <tr>
-            <td></td>
-            <td></td>
-            <td></td>
-            <td></td>
-            <td></td>
+            <td>{{instrumento.tag}}</td>
+            <td>{{instrumento.tipo_instrumento}}</td>
+            <td>{{instrumento.marca}}</td>
+            <td>{{instrumento.status_instrumento}}</td>
+            <td>{{instrumento.tempo_calibracao}}</td>
         </tr>
+        {% endfor %}
     </tbody>
 </table>
 
 {% endblock %}
 
 {% block scripts %}
-
+<script>
+    $(document).ready(function () {
+        $('#instrumentos-table').DataTable({
+            "pageLength": 10,  // Define 10 itens por página
+            "lengthChange": false, // Oculta a opção de mudar a quantidade de itens por página
+            "ordering": true, // Permite ordenação
+            "language": {
+                "paginate": {
+                    "previous": "Anterior",
+                    "next": "Próximo"
+                },
+                "search": "Buscar:",
+                "zeroRecords": "Nenhum resultado encontrado",
+                "info": "Página _PAGE_ de _PAGES_",
+                "infoEmpty": "Nenhum registro disponível"
+            }
+        });
+    });
+</script>
 {% endblock %}

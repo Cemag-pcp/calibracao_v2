@@ -128,12 +128,15 @@ class InfoInstrumento(models.Model):
         super().save(*args, **kwargs)
 
         if not self.qrcode:
-            url = reverse('instrumento_detail', kwargs={'pk': self.pk})
-            qr = qrcode.make(f'{self.get_full_url()}{url}')
+            url = self.get_full_url() + reverse('historico') + f'?instrumento={self.tag}'
+
+            # Cria o QR Code com essa URL
+            qr = qrcode.make(url)
             qr_io = BytesIO()
             qr.save(qr_io, 'PNG')
-            qr_file = File(qr_io, name=f'{self.tag}_qrcode.png')
-            self.qrcode = qr_file
+
+            # Salva o QR Code no campo `qrcode`
+            self.qrcode.save(f'{self.tag}_qrcode.png', File(qr_io), save=False)
             super().save(*args, **kwargs)
 
     def get_full_url(self):
@@ -189,7 +192,9 @@ class HistoricoInstrumento(models.Model):
         ('recebido', 'Recebido'),
         ('analisado', 'Analisado'),
         ('troca_reponsavel', 'Troca de responsável'),
-        ('primeira_atribuicao','Primeira atribuição')
+        ('atribuicao','Atribuição'),
+        ('danificado', 'Danificado'),
+        ('devolvido', 'Devolvido')
     ]
 
     instrumento = models.ForeignKey(InfoInstrumento, on_delete=models.CASCADE, related_name='historico')

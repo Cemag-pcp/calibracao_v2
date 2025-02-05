@@ -40,7 +40,7 @@ def emissao_ficha_por_funcionario(request, id):
                 dados_combinados.append({
                     'data_entrega': status.data_entrega,
                     'instrumento': status.instrumento,
-                    'motivo': status.motivo,
+                    'motivo': f'{status.motivo} - {status.observacoes}',
                     'tipo': 'Status'
                 })
 

@@ -136,7 +136,7 @@
 
                     <div id="campo-novo-instrumento">
                         <hr>
-                        <p><code style="color: #001dff;" id="descricao-instrumento-substituido">Atualmente, Luan está responsável pelo instrumento. Gostaria de designar um novo instrumento para ele?</code></p>
+                        <p><code style="color: #001dff;" id="descricao-instrumento-substituido"></code></p>
                         <div class="row">
                             <div class="col-sm-6 mb-3">
                                 <label for="validacao-de-substituicao" class="form-label">Instrumento será substituído?</label>
@@ -188,8 +188,7 @@
                             class="form-control" 
                             name="dataRecebimento" 
                             id="dataRecebimento" 
-                            required
-                        >
+                            required>
                     </div>
 
                     <!-- Observação de Recebimento -->
@@ -200,8 +199,7 @@
                             name="obsRecebimento" 
                             id="obsRecebimento" 
                             rows="3"
-                            placeholder="Insira observações sobre o recebimento, se necessário."
-                        ></textarea>
+                            placeholder="Insira observações sobre o recebimento, se necessário."></textarea>
                     </div>
 
                     <!-- Link de Certificado -->
@@ -212,8 +210,12 @@
                             class="form-control" 
                             name="linkCertificado" 
                             id="linkCertificado" 
-                            placeholder="Insira o link do certificado, se disponível."
-                        >
+                            placeholder="Insira o link do certificado, se disponível.">
+                    </div>
+
+                    <div id="campo-ultimo-assinante" style="display: none;">
+                        <hr>
+                        <p><code style="color: #001dff;" id="descricao-ultimo-assinante">A última assinatura foi feita pelo ..., deseja devolver o instrumento novamente?</code></p>                     
                     </div>
 
                     <!-- Botão de Envio -->
@@ -530,19 +532,16 @@
                         </select>
                     </div>
                     <div class="col-sm-6 mb-3 col-instrumento-status-substituicao">
-                        <!-- Data de entrega -->
                         <label for="instrumento-status-substituicao">Será substituido por qual instrumento?</label>
-                        <select class="form-control" name="instrumento-status-substituicao" id="instrumento-status-substituicao" required>
+                        <select class="form-control" name="instrumento-status-substituicao" id="instrumento-status-substituicao">
 
                         </select>
                     </div>
                     <div class="col-sm-6 mb-3">
-                        <!-- Data de entrega -->
                         <label for="data-substituicao">Data da substituição</label>
                         <input class="form-control" type="date" name="data-substituicao" id="data-substituicao" required>
                     </div>
                     <div class="col-sm-6 mb-3">
-                        <!-- Data de entrega -->
                         <label for="dataEntrega">Motivo da substituição</label>
                         <input class="form-control" style="background-color: #e9ecef; opacity: 1;" type="text" name="instrumento-status-substituicao" id="instrumento-status-substituicao" value="Danificado" readonly>
                     </div>  

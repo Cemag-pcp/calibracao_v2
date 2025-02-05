@@ -102,7 +102,7 @@ $(document).ready(function () {
                     `; 
 
 
-                    if (row.status_calibracao !== 'enviado') {
+                    if (row.status_calibracao !== 'enviado' && row.status_instrumento !== 'danificado') {
                         buttons +=`<li>
                                         <hr class="dropdown-divider">
                                     </li>
@@ -126,7 +126,7 @@ $(document).ready(function () {
                     if (row.status_calibracao === 'enviado') {
                         buttons += `<li><hr class="dropdown-divider"></li>
                                     <li><p class="dropdown-header">Status: A Receber</p></li>
-                                    <li><a class="dropdown-item" style="cursor:pointer" onclick="receberCalibracao('${JSON.stringify(ultimoEnvioList)}','${row.tag}')">
+                                    <li><a class="dropdown-item" style="cursor:pointer" onclick="receberCalibracao('${JSON.stringify(ultimoEnvioList)}', '${row.tag}', '${row.ultimo_assinante.nome}')">
                                         Receber
                                     </a></li>`;
                     } else if (row.status_calibracao === 'recebido' && contem_null) {

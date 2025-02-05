@@ -60,7 +60,31 @@ def registrar_primeiro_responsavel(instrumento, descricao):
 
     HistoricoInstrumento.objects.create(
         instrumento=instrumento,
-        tipo_mudanca='primeira_atribuicao',
+        tipo_mudanca='atribuicao',
+        descricao_mudanca=descricao,
+        data_mudanca=timezone.now()
+    )
+
+def registrar_instrumento_danificado(instrumento, descricao):
+    """
+    Registra no histórico o instrumento danificado.
+    """
+
+    HistoricoInstrumento.objects.create(
+        instrumento=instrumento,
+        tipo_mudanca='danificado',
+        descricao_mudanca=descricao,
+        data_mudanca=timezone.now()
+    )
+
+def registrar_instrumento_devolucao(instrumento, descricao):
+    """
+    Registra no histórico o instrumento devolvido.
+    """
+
+    HistoricoInstrumento.objects.create(
+        instrumento=instrumento,
+        tipo_mudanca='devolucao',
         descricao_mudanca=descricao,
         data_mudanca=timezone.now()
     )

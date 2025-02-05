@@ -89,10 +89,8 @@ function substituicaoInstrumento(tag, responsavel, instrumento_id) {
 
     if (responsavel === 'null') {
         colInstrumentoStatusSubstituicao.forEach(element => element.classList.add('d-none'));
-        instrumentoStatusSubstituicao.required = false;
     } else {
         colInstrumentoStatusSubstituicao.forEach(element => element.classList.remove('d-none'));
-        instrumentoStatusSubstituicao.required = true;
     }
 
     formDevolucao.classList.add('d-none');
@@ -122,7 +120,7 @@ function carregarInstrumentosNoSelect(selectInstrumentos,tag) {
         selectInstrumentos.innerHTML = ''; // Clear existing options
         let option = document.createElement('option');
         option.value = '';
-        option.textContent = '---------';
+        option.textContent = 'Nenhum';
         selectInstrumentos.appendChild(option);
         data.forEach(instrument => {
             let option = document.createElement('option');
@@ -156,11 +154,17 @@ function carregarInstrumentosNoSelect(selectInstrumentos,tag) {
 //     const modal = new bootstrap.Modal(document.getElementById('statusInstrumentoModal'));
 //     modal.show();
 
-// }
+// }s
 
-function receberCalibracao(idsEnvio, tag) {
+function receberCalibracao(idsEnvio, tag, ultimoAssinanteNome) {
+    let divUltimoAssinante = document.getElementById('campo-ultimo-assinante');
+
     document.getElementById('modal-title-recebimento').textContent = `Recebimento do instrumento: ${tag}`;
-    console.log(idsEnvio)
+
+    document.getElementById('descricao-ultimo-assinante').innerHTML = `O último responsável pelo instrumento <strong>${tag}</strong> foi o funcionário <strong>${ultimoAssinanteNome}</strong>`;
+
+    ultimoAssinanteNome === 'null' ? divUltimoAssinante.style.display = 'none': divUltimoAssinante.style.display = 'block'
+
     document.getElementById('id-instrumento-recebimento').value = idsEnvio; // Transformando a lista em string
     document.getElementById('formRecebimento').reset();
 

@@ -51,6 +51,9 @@ def enviar_view(request):
                         data_entrega=data_envio
                     )
 
+                    descricao = f"Atribuindo a responsabilidade para: {funcionario.matricula} - {funcionario.nome} na data {data_envio}"
+                    registrar_primeiro_responsavel(novo_instrumento, descricao)
+
                     DesignarInstrumento.objects.create(
                         instrumento_escolhido=novo_instrumento,
                         responsavel=funcionario,
@@ -60,7 +63,7 @@ def enviar_view(request):
                     StatusInstrumento.objects.create(
                         funcionario=funcionario,
                         instrumento=instrumento_object,
-                        motivo='substituição - calibração',
+                        motivo='substituição',
                         data_entrega=data_envio,
                         observacoes='calibração'
                     )
@@ -78,6 +81,9 @@ def enviar_view(request):
                         motivo='devolução',
                         data_entrega=data_envio
                     )
+
+                    descricao = f"Instrumento: {instrumento_object.tag} - Devolvido pelo funcionário: {funcionario} - na data {data_envio}"
+                    registrar_instrumento_devolucao(instrumento_object, descricao)
 
                 # Buscar todos os pontos de calibração relacionados
                 pontos_calibracao = instrumento_object.pontos_calibracao.filter(status_ponto_calibracao='ativo')
@@ -160,7 +166,7 @@ def receber_view(request):
                     envio_object.save()
 
                     # Registra o recebimento da calibração
-                    descricao = f'Instrumento recebido do laboratório {envio_object.laboratorio} dia {data_recebimento}.'
+                    descricao = f'Instrumento no ponto {envio_object.ponto_calibracao}, recebido do laboratório {envio_object.laboratorio} dia {data_recebimento}.'
                     registrar_recebimento_calibracao(envio_object.instrumento, envio_object.ponto_calibracao, descricao)
 
                 return JsonResponse({'status': 'success', 'message': 'Instrumentos recebidos com sucesso'}, status=200)
@@ -226,7 +232,7 @@ def analisar_view(request):
                     responsavel_analise=responsavel_analise_object
                 )
 
-                descricao=f'Instrumento analisado por {responsavel_analise_object} dia {data_analise}.\nResultado da análise: {resultado_analise}.'
+                descricao=f'Instrumento no ponto {envio_object.ponto_calibracao} foi analisado por {responsavel_analise_object} dia {data_analise}.\nResultado da análise: {resultado_analise}.'
                 registrar_analise_ponto(envio_object.instrumento, envio_object.ponto_calibracao, descricao)
 
                 return JsonResponse({'status': 'success', 'message': 'Análise realizada com sucesso'}, status=200)

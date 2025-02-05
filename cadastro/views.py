@@ -206,8 +206,12 @@ def designar_instrumentos(request):
                         instrumento=instrumento,
                         assinante=funcionario,
                         foto_assinatura=assinatura_path,
-                        motivo='entrega'
+                        data_entrega=data_entrega,
+                        motivo='Entrega'
                     )
+
+                    descricao = f"Atribuindo a responsabilidade para: {funcionario.matricula} - {funcionario.nome} na data {data_entrega}"
+                    registrar_primeiro_responsavel(instrumento, descricao)
 
                 return JsonResponse({"sucesso": True})
             
@@ -296,7 +300,7 @@ def escolher_responsavel(request):
 
                 else:
                     # Cria uma nova designação
-                    descricao = f"Atribuindo a responsabilidade para: {funcionario_object.matricula} - {funcionario_object.nome}"
+                    descricao = f"Atribuindo a responsabilidade para: {funcionario_object.matricula} - {funcionario_object.nome} na data {data_entrega}"
                     registrar_primeiro_responsavel(instrumento_object,descricao=descricao)
 
                     designacao = DesignarInstrumento.objects.create(
@@ -369,7 +373,7 @@ def editar_responsavel(request):
 
                 if designacao and id_novo_responsavel != None and (id_novo_responsavel != nome_ultimo_responsavel):
                     # Atualiza o responsável existente
-                    descricao = f"Mudando responsável de: {designacao.responsavel.matricula} - {designacao.responsavel.nome} para: {funcionario_object.matricula} - {funcionario_object.nome}\nLink da ficha assinada:"
+                    descricao = f"Mudando responsável de: {designacao.responsavel.matricula} - {designacao.responsavel.nome} para: {funcionario_object.matricula} - {funcionario_object.nome} - na data {data_entrega}"
                     registrar_mudanca_responsavel(instrumento_object,descricao=descricao)
                     
                     designacao.responsavel = funcionario_object
@@ -378,15 +382,14 @@ def editar_responsavel(request):
                     AssinaturaInstrumento.objects.create(
                         instrumento=instrumento_object,
                         assinante=funcionario_object,
-                        data_assinatura=data_entrega,
                         data_entrega=data_entrega,
                         foto_assinatura=signature_file,
                         motivo=motivo_editar_responsavel
                     )
                 else:
                     # Atualiza o responsável existente
-                    descricao = f"Mudando responsável de: {designacao.responsavel.matricula} - {designacao.responsavel.nome} para: Controle da Qualidade \nLink da ficha assinada:"
-                    registrar_mudanca_responsavel(instrumento_object,descricao=descricao)
+                    descricao = f"Instrumento: {instrumento_object.tag} - Devolvido para o Controle da Qualidade pelo funcionário: {ultimo_funcionario} - na data {data_entrega}"
+                    registrar_instrumento_devolucao(instrumento_object, descricao)
                     instrumento_object.status_instrumento = 'ativo'
                     instrumento_object.save()
                     designacao.delete()
@@ -425,7 +428,9 @@ def substituir_instrumento(request):
 
                 PontoCalibracao.objects.filter(instrumento=instrumento).update(status_ponto_calibracao='inativo')
 
-                if id_responsavel and id_responsavel != 'null':
+                designacao = DesignarInstrumento.objects.filter(instrumento_escolhido=instrumento).first()
+                
+                if instrumento_substituira != '':
                     novo_instrumento = InfoInstrumento.objects.filter(id=instrumento_substituira).first()
                     funcionario = Funcionario.objects.filter(id=id_responsavel).first()
 
@@ -441,7 +446,9 @@ def substituir_instrumento(request):
                         data_entrega=data_substituicao
                     )
 
-                    designacao = DesignarInstrumento.objects.filter(instrumento_escolhido=instrumento).first()
+                    descricao = f"Atribuindo a responsabilidade para: {funcionario.matricula} - {funcionario.nome} na data {data_substituicao}"
+                    registrar_primeiro_responsavel(novo_instrumento, descricao)
+                    
                     DesignarInstrumento.objects.filter(pk=designacao.pk).delete()
 
                     DesignarInstrumento.objects.create(
@@ -453,10 +460,28 @@ def substituir_instrumento(request):
                     StatusInstrumento.objects.create(
                         funcionario=funcionario,
                         instrumento=instrumento,
-                        motivo='substituição - danificado',
+                        motivo='substituição',
                         data_entrega=data_substituicao,
                         observacoes='danificado'
                     )
+
+                    descricao = f"Instrumento: {instrumento.tag} - Danificado - na data {data_substituicao}"
+                    registrar_instrumento_danificado(instrumento, descricao)
+
+                elif designacao and id_responsavel != 'null': 
+                    funcionario = Funcionario.objects.filter(id=id_responsavel).first()
+                    DesignarInstrumento.objects.filter(pk=designacao.pk).delete()
+
+                    StatusInstrumento.objects.create(
+                        funcionario=funcionario,
+                        instrumento=instrumento,
+                        motivo='substituição',
+                        data_entrega=data_substituicao,
+                        observacoes='danificado'
+                    )
+
+                    descricao = f"Instrumento: {instrumento.tag} - Danificado - na data {data_substituicao}"
+                    registrar_instrumento_danificado(instrumento, descricao)
 
                 return JsonResponse({'status': 'success',}, status=200)
         except json.JSONDecodeError:
@@ -473,10 +498,13 @@ def substituir_instrumento(request):
         return JsonResponse(list(unassigned_instruments), safe=False)
 
 def historico(request):
-
     instrumentos = InfoInstrumento.objects.all()
+    instrumento_selecionado = request.GET.get('instrumento','')
 
-    return render(request, 'historico.html', {'instrumentos': instrumentos})
+    return render(request, 'historico.html', {
+        'instrumentos': instrumentos,
+        'instrumento_selecionado':instrumento_selecionado
+    })
 
 def historico_instrumento(request, id):
     
@@ -553,4 +581,8 @@ def historico_datatable_instrumento(request, id):
 
 def cadastrar_instrumento(request):
 
-    return render(request, 'cadastro.html')
+    instrumentos_cadastrados = InfoInstrumento.objects.all()
+
+    return render(request, 'cadastro.html', {
+        'instrumentos_cadastrados':instrumentos_cadastrados
+    })
