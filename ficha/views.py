@@ -3,6 +3,7 @@ from openpyxl import load_workbook
 import os
 from openpyxl.drawing.image import Image
 import copy
+from io import BytesIO
 from django.http import JsonResponse, HttpResponse
 from cadastro.models import Funcionario, PontoCalibracao
 from ficha.models import AssinaturaInstrumento,StatusInstrumento
@@ -87,8 +88,9 @@ def emissao_ficha_por_funcionario(request, id):
                         ws.add_image(img)
 
             if assinatura_funcionario.exists() and assinatura_funcionario.last().foto_assinatura:
-                ultima_foto_path = assinatura_funcionario.last().foto_assinatura.path
-                ultima_foto = Image(ultima_foto_path)
+                ultima_foto_url = assinatura_funcionario.last().foto_assinatura.url
+                ultima_foto = Image.open(BytesIO(response.content))
+                ultima_foto = Image(ultima_foto_url)
                 ultima_foto.width, ultima_foto.height = 100, 50  # Ajuste o tamanho conforme necessário
                 ultima_foto.anchor = 'D12'  # Define a âncora para a célula C12
                 ws.add_image(ultima_foto)

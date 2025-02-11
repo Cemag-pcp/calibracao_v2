@@ -3,6 +3,7 @@
 
 {% block links %}
     <link href="{% static 'css/timeline.css' %}" rel="stylesheet">
+    <link href="{% static 'css/selects.css' %}" rel="stylesheet">
 {% endblock %}
 
 {% block content %}
@@ -92,7 +93,7 @@
                         <!-- Responsável do Envio -->
                         <div class="col-sm-6">
                             <label for="responsavelEnvio" class="form-label">Responsável pelo Envio</label>
-                            <select class="form-control" name="responsavelEnvio" id="responsavelEnvio" required>
+                            <select class="form-control select2" name="responsavelEnvio" id="responsavelEnvio" required>
                                 <option value="">------------</option>
                                 {% for operador in operadores %}
                                 <option value="{{ operador.id }}">{{ operador.matricula }} - {{ operador.nome }}</option>
@@ -149,7 +150,7 @@
                             <!-- Instrumento -->
                             <div class="col-sm-6 mb-3" id="col-instrumento-substituira-envio">
                                 <label for="instrumento-substituira-envio" class="form-label">Instrumento</label>
-                                <select class="form-control" name="instrumento-substituira-envio" id="instrumento-substituira-envio">
+                                <select class="form-control select2" name="instrumento-substituira-envio" id="instrumento-substituira-envio">
 
                                 </select>
                             </div>    
@@ -405,7 +406,7 @@
                         <div class="col-sm-6">
                             <!-- Nome do responsável -->
                             <label for="nome-responsavel">Escolha um responsável</label>
-                            <select class="form-control" name="nome-responsavel" id="nome-responsavel" required>
+                            <select class="form-control select2" name="nome-responsavel" id="nome-responsavel" required>
                                 <option value="">-------</option>
                                 {% for funcionario in funcionarios %}
                                 <option value="{{funcionario.id}}">{{funcionario.matricula}} - {{funcionario.nome}}</option>
@@ -481,7 +482,7 @@
                             </div>
                             <div class="col-sm-6 mb-3" id="col-nome-editar-responsavel">
                                 <label for="nome-responsavel">Responsável</label>
-                                <select class="form-control" name="nome-editar-responsavel" id="nome-editar-responsavel">
+                                <select class="form-control select2" name="nome-editar-responsavel" id="nome-editar-responsavel">
                                     <option value="">Controle da Qualidade</option>
                                     {% for funcionario in funcionarios %}
                                     <option value="{{funcionario.id}}">{{funcionario.matricula}} - {{funcionario.nome}}</option>
@@ -533,7 +534,7 @@
                     </div>
                     <div class="col-sm-6 mb-3 col-instrumento-status-substituicao">
                         <label for="instrumento-status-substituicao">Será substituido por qual instrumento?</label>
-                        <select class="form-control" name="instrumento-status-substituicao" id="instrumento-status-substituicao">
+                        <select class="form-control select2" name="instrumento-status-substituicao" id="instrumento-status-substituicao">
 
                         </select>
                     </div>
@@ -594,7 +595,7 @@
                     <div class="row mb-3">
                         <div class="col-sm-6">
                             <label for="">Funcionário</label>
-                            <select class="form-control" name="funcionario-designar-varios-instrumentos" id="funcionario-designar-varios-instrumentos" required>
+                            <select class="form-control select2" name="funcionario-designar-varios-instrumentos" id="funcionario-designar-varios-instrumentos" required>
                                 <option value="">Selecione um funcionário</option>
                                 {% for funcionario in funcionarios %}
                                 <option value="{{funcionario.id}}">{{funcionario.matricula}} - {{funcionario.nome}}</option>
@@ -638,6 +639,7 @@
     <script src="{% static 'js/data-table-pc.js' %}"></script>
     <script src="{% static 'js/acoes-pc.js' %}"></script>
     <script src="{% static 'js/signature.js' %}"></script>
+    <script src="{% static 'js/select2.js' %}"></script>
     <script src="{% static 'js/add-varios-instrumentos.js' %}"></script>
     <script src="{% static 'js/designar-mais-instrumentos.js' %}"></script>
 {% endblock %}

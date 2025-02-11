@@ -118,7 +118,7 @@ $(document).ready(function () {
                         }    
                         buttons += `<li>
                             <a class="dropdown-item" style="cursor:pointer"  onclick="substituicaoInstrumento('${row.tag}','${row.responsavel.id}','${row.id}')">
-                                Substituir
+                                Danificado
                             </a>
                         </li>`;
                     }

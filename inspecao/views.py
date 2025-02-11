@@ -165,6 +165,8 @@ def receber_view(request):
                     envio_object.status = 'recebido'
                     envio_object.save()
 
+                    envio_object.calcular_proxima_calibracao()
+
                     # Registra o recebimento da calibração
                     descricao = f'Instrumento no ponto {envio_object.ponto_calibracao}, recebido do laboratório {envio_object.laboratorio} dia {data_recebimento}.'
                     registrar_recebimento_calibracao(envio_object.instrumento, envio_object.ponto_calibracao, descricao)

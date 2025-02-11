@@ -2,20 +2,50 @@ from django.shortcuts import render, get_object_or_404
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.db.models import Max
 from django.http import JsonResponse
-from django.db.models import Q
+from django.db.models import Q, Prefetch
+from django.core.cache import cache
 from django.db import transaction
+from django.utils.dateparse import parse_date
 from django.core.files.base import ContentFile
 
 from inspecao.models import Envio, Laboratorio, AnaliseCertificado
 from ficha.models import AssinaturaInstrumento, StatusInstrumento
-from .models import InfoInstrumento, HistoricoInstrumento, Funcionario, DesignarInstrumento, Operadores, PontoCalibracao
+from .models import InfoInstrumento, HistoricoInstrumento, Funcionario, DesignarInstrumento, Operadores, PontoCalibracao, TipoInstrumento, Marca, Unidade
 from cadastro.utils import *
 from django.http import HttpResponse, JsonResponse
 
 from datetime import datetime
+import time
 import json
 import base64
 import uuid
+
+def calcular_status_calibracao(ultimo_envio, proxima_calibracao, hoje):
+    if ultimo_envio and ultimo_envio.status == 'enviado':
+        return 'Em calibração'
+    elif proxima_calibracao:
+        if proxima_calibracao >= hoje:
+            dias_para_vencer = (proxima_calibracao - hoje).days
+            return f'Em dia, faltam {dias_para_vencer} dias'
+        else:
+            dias_atrasado = (hoje - proxima_calibracao).days
+            return f'Atrasado há {dias_atrasado} dias'
+    else:
+        return 'Sem próxima calibração definida'
+
+def formatar_responsavel(designacao):
+    if designacao and designacao.responsavel:
+        return {
+            'id': designacao.responsavel.id,
+            'matriculaNome': f"{designacao.responsavel.matricula} - {designacao.responsavel.nome}",
+            'dataEntrega': designacao.data_entrega_funcionario
+        }
+    else:
+        return {
+            'id': None,
+            'matriculaNome': None,
+            'dataEntrega': None
+        }
 
 def instrumento_detail(request, pk):
     instrumento = get_object_or_404(InfoInstrumento, pk=pk)
@@ -48,68 +78,57 @@ def home(request):
                                          'motivos':motivos,
                                          'instrumentos':instrumento})
 
+from django.db.models import Prefetch
+from django.core.paginator import Paginator
+from django.http import JsonResponse
+from datetime import datetime
+import time
+
 def instrumentos_data(request):
-
     hoje = datetime.now().date()
+    start_date = time.time()
 
-    # Coleta os instrumentos
-    instrumentos = InfoInstrumento.objects.all()
+    # Pré-carregar envios e análises de certificados
+    envios_prefetch = Prefetch(
+        'ponto',  # Substitua por 'envio_set' se o related_name não for 'envios'
+        queryset=Envio.objects.prefetch_related(
+            Prefetch(
+                'analise_envio',  # related_name no modelo AnaliseCertificado
+                queryset=AnaliseCertificado.objects.all()
+            )
+        ).order_by('-id')
+    )
 
-    # Processar os dados para DataTable
+    pontos_calibracao_prefetch = Prefetch(
+        'pontos_calibracao',
+        queryset=PontoCalibracao.objects.prefetch_related(envios_prefetch)
+    )
+
+    assinaturas_prefetch = Prefetch(
+        'assinatura_instrumento',
+        queryset=AssinaturaInstrumento.objects.order_by('-data_assinatura')
+    )
+
+    instrumentos = InfoInstrumento.objects.prefetch_related(
+        pontos_calibracao_prefetch,
+        assinaturas_prefetch,
+        'designar_instrumento'
+    ).all()
+
     instrumentos_detalhes = {}
     for instrumento in instrumentos:
-
-        # Adiciona os detalhes dos pontos de calibração
-        pontos_calibracao = instrumento.pontos_calibracao.all()  # Obtém todos os pontos relacionados ao instrumento
-
-        # Obtém a última assinatura do instrumento
-        ultima_assinatura = AssinaturaInstrumento.objects.filter(instrumento=instrumento).order_by('-data_assinatura').first()
+        ultima_assinatura = instrumento.assinatura_instrumento.first()
         ultimo_assinante = ultima_assinatura.assinante if ultima_assinatura else None
 
-        for ponto in pontos_calibracao:
-            # Obtém o último envio específico para o ponto de calibração
-            ultimo_envio = Envio.objects.filter(instrumento=instrumento, ponto_calibracao=ponto).order_by('-id').first()
+        for ponto in instrumento.pontos_calibracao.all():
+            ultimo_envio = ponto.ponto.first()  # Substitua por 'envio_set' se necessário
+            analise_certificado = ultimo_envio.analise_envio.first() if ultimo_envio else None
 
-            proxima_calibracao = instrumento.proxima_calibracao  # Usando a data de calibração do instrumento
+            status_calibracao = calcular_status_calibracao(ultimo_envio, instrumento.proxima_calibracao, hoje)
 
-            # Busca o último certificado associado ao envio
-            analise_certificado = AnaliseCertificado.objects.filter(envio=ultimo_envio).first()
+            designacao = instrumento.designar_instrumento.first()
+            responsavel = formatar_responsavel(designacao)
 
-            if ultimo_envio:
-                if ultimo_envio.status == 'enviado':
-                    status_calibracao = 'Em calibração'
-                    proxima_calibracao = 'Aguardando retornar'
-                else:
-                    if proxima_calibracao and proxima_calibracao >= hoje:
-                        dias_para_vencer = (proxima_calibracao - hoje).days
-                        status_calibracao = f'Em dia, faltam {dias_para_vencer} dias'
-                    elif proxima_calibracao:
-                        dias_atrasado = (hoje - proxima_calibracao).days
-                        status_calibracao = f'Atrasado há {dias_atrasado} dias'
-                    else:
-                        status_calibracao = 'Sem próxima calibração definida'
-            else:
-                if proxima_calibracao and proxima_calibracao >= hoje:
-                    dias_para_vencer = (proxima_calibracao - hoje).days
-                    status_calibracao = f'Em dia, faltam {dias_para_vencer} dias'
-                elif proxima_calibracao:
-                    dias_atrasado = (hoje - proxima_calibracao).days
-                    status_calibracao = f'Atrasado há {dias_atrasado} dias'
-                else:
-                    status_calibracao = 'Sem próxima calibração definida'
-
-            designacao = DesignarInstrumento.objects.filter(instrumento_escolhido=instrumento).first()
-
-            if designacao and designacao.responsavel:
-                responsavel_id = designacao.responsavel.id
-                responsavel = f"{designacao.responsavel.matricula} - {designacao.responsavel.nome}"
-                responsavel_data_entrega = designacao.data_entrega_funcionario
-            else:
-                responsavel = None
-                responsavel_id = None
-                responsavel_data_entrega = None
-
-            # Agrupar os dados por TAG
             if instrumento.tag not in instrumentos_detalhes:
                 instrumentos_detalhes[instrumento.tag] = {
                     'id': instrumento.id,
@@ -118,11 +137,11 @@ def instrumentos_data(request):
                     'marca': instrumento.marca.nome,
                     'status_instrumento': instrumento.status_instrumento,
                     'ultima_calibracao': instrumento.ultima_calibracao,
-                    'proxima_calibracao': proxima_calibracao,
+                    'proxima_calibracao': instrumento.proxima_calibracao,
                     'status_calibracao_string': status_calibracao,
                     'status_calibracao': ultimo_envio.status if ultimo_envio else None,
                     'tempo_calibracao': instrumento.tempo_calibracao,
-                    'responsavel': {'id': responsavel_id, 'matriculaNome': responsavel, 'dataEntrega': responsavel_data_entrega},
+                    'responsavel': responsavel,
                     'ultimo_assinante': {
                         'nome': ultimo_assinante.nome if ultimo_assinante else None,
                         'id': ultimo_assinante.id if ultimo_assinante else None
@@ -130,7 +149,6 @@ def instrumentos_data(request):
                     'pontos_calibracao': []
                 }
 
-            # Adiciona os detalhes dos pontos ao agrupamento da tag
             instrumentos_detalhes[instrumento.tag]['pontos_calibracao'].append({
                 'ultimo_envio_pk': ultimo_envio.pk if ultimo_envio else None,
                 'ponto_pk': ponto.pk,
@@ -154,13 +172,16 @@ def instrumentos_data(request):
     except EmptyPage:
         instrumentos_page = []
 
-    # Formato esperado pelo DataTable
     data = {
         'draw': int(request.GET.get('draw', 1)),
         'recordsTotal': paginator.count,
         'recordsFiltered': paginator.count,
         'data': list(instrumentos_page),
     }
+
+    end_date = time.time()
+    duration = end_date - start_date
+    print(f"Duração: {duration} segundos")
 
     return JsonResponse(data)
 
@@ -579,10 +600,189 @@ def historico_datatable_instrumento(request, id):
         "historico": historico_data
     })
 
-def cadastrar_instrumento(request):
+def template_instrumento(request):
+    # Carregar instrumentos cadastrados com os pontos de calibração relacionados
+    instrumentos = InfoInstrumento.objects.prefetch_related(
+        'pontos_calibracao',  # Usando o related_name para prefetch dos pontos de calibração
+        'tipo_instrumento', 'marca'
+    ).all()
 
-    instrumentos_cadastrados = InfoInstrumento.objects.all()
+    # Criar a estrutura desejada no formato {'instrumento': <InfoInstrumento>, 'pontos_calibracao': <QuerySet>}
+    instrumentos_com_pontos_calibracao = [
+        {
+            'instrumento': instrumento,
+            'pontos_calibracao': instrumento.pontos_calibracao.all()  # Acessando os pontos de calibração diretamente
+        }
+        for instrumento in instrumentos
+    ]
 
+    # Passar os instrumentos com pontos de calibração para o template
     return render(request, 'cadastro.html', {
-        'instrumentos_cadastrados':instrumentos_cadastrados
+        'instrumentos_com_pontos_calibracao': instrumentos_com_pontos_calibracao
     })
+
+def add_instrumento(request):
+
+    if request.method == 'POST':
+
+        start_time = time.time()
+
+        data = request.POST
+        tag = data.get("modal-add-tag")
+        tipo_nome = data.get("modal-add-tipo")
+        marca_nome = data.get("modal-add-marca")
+        status_exibido = data.get("modal-add-status")
+        tempo_calib = data.get("modal-add-tempo")
+        ultima_calib = data.get("modal-add-ultima")
+
+        # Verificação antecipada para evitar consultas desnecessárias
+        if not all([tag, tipo_nome, marca_nome, status_exibido, tempo_calib, ultima_calib]):
+            return JsonResponse({"error": "Todos os campos são obrigatórios"}, status=400)
+
+        try:
+            tempo_calibracao = int(tempo_calib)
+            ultima_calibracao = parse_date(ultima_calib)
+            if not ultima_calibracao:
+                return JsonResponse({"error": "Data de última calibração inválida"}, status=400)
+
+            # Mapeia status de exibição para chave armazenada no banco
+            STATUS_DICT = dict(InfoInstrumento.STATUS_INSTRUMENTO_CHOICES)
+            status = next((key for key, value in STATUS_DICT.items() if value == status_exibido), None)
+
+            if status is None:
+                return JsonResponse({"error": "Status inválido"}, status=400)
+
+            tipo = TipoInstrumento.objects.select_related().get(nome=tipo_nome)
+            marca, _ = Marca.objects.get_or_create(nome=marca_nome)
+
+            # Criando o novo instrumento
+            novo_instrumento = InfoInstrumento(
+                tag=tag,
+                tipo_instrumento=tipo,
+                marca=marca,
+                status_instrumento=status,
+                tempo_calibracao=tempo_calibracao,
+                ultima_calibracao=ultima_calibracao
+            )
+            novo_instrumento.save()
+            
+            end_time = time.time()  # Fim da medição
+            duration = end_time - start_time  # Tempo decorrido
+            
+            print(duration)
+
+            return JsonResponse({"message": "Instrumento adicionado com sucesso!", "id": novo_instrumento.id})
+
+        except TipoInstrumento.DoesNotExist:
+            return JsonResponse({"error": "Tipo de instrumento não encontrado"}, status=400)
+        except ValueError:
+            return JsonResponse({"error": "Erro ao converter os valores numéricos"}, status=400)
+    
+    elif request.method == 'GET':
+
+        # Modal adicionar instrumento
+
+        start_time = time.time()
+    
+        list_status = [status[1] for status in InfoInstrumento.STATUS_INSTRUMENTO_CHOICES]
+
+        lists_type = TipoInstrumento.objects.values_list('nome', flat=True)
+
+        list_type = [types for types in lists_type]
+
+        end_time = time.time()  # Fim da medição
+        duration = end_time - start_time  # Tempo decorrido
+
+        print(duration)
+
+        return JsonResponse({"statusList": list_status, "typeList": list_type})
+
+def add_tipo_instrumento(request):
+
+    with transaction.atomic():
+        try:
+            if request.method == 'POST':
+
+                data = json.loads(request.body)
+                tipo_instrumento = data.get("tipo-instrumento").strip()
+
+                if TipoInstrumento.objects.filter(nome__iexact=tipo_instrumento).exists():
+                    return JsonResponse({'status': 'error', 'message': 'Este tipo de instrumento já existe'}, status=400)
+
+                if tipo_instrumento and tipo_instrumento != "":
+                    TipoInstrumento.objects.create(
+                        nome=tipo_instrumento
+                    )
+
+                return JsonResponse({"data":data})
+        
+        except json.JSONDecodeError:
+            return JsonResponse({'status': 'error', 'message': 'Erro ao processar o JSON enviado'}, status=400)
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+    
+def adicionar_ponto_calibracao(request):
+
+    if request.method == "POST":
+        try:
+            # Carrega os dados enviados no corpo da requisição
+            data = json.loads(request.body)
+
+            # Valida os dados recebidos (você pode adicionar mais validações conforme necessário)
+            instrumento_id = data.get('instrumento_id_ponto_calibracao')
+            descricao = data.get('descricao-pc')
+            faixa_nominal = data.get('faixa_nominal-pc')
+            unidade = data.get('unidade-pc')
+            status = data.get('status-pc', 'ativo')  # Status padrão é 'ativo'
+
+            # Busca as referências para 'instrumento' e 'unidade'
+            instrumento = InfoInstrumento.objects.get(id=instrumento_id)
+            unidade = Unidade.objects.get(nome=unidade)
+
+            PontoCalibracao.objects.create(
+                descricao=descricao,
+                instrumento=instrumento,
+                faixa_nominal=faixa_nominal,
+                unidade=unidade,
+                status_ponto_calibracao=status
+            )
+
+            # Retorna a resposta JSON com os dados do novo ponto de calibração
+            return JsonResponse({"data": "Ponto de calibração adicionado com sucesso!"})
+
+        except Exception as e:
+            print("error", str(e))
+            return JsonResponse({"error": str(e)}, status=400)
+    
+    elif request.method == "GET":
+
+        lists_unit = Unidade.objects.values_list('nome', flat=True)
+
+        list_unit = [unit for unit in lists_unit]
+
+        return JsonResponse({"unitList": list_unit})
+
+    return JsonResponse({"error": "Método não permitido"}, status=405)
+
+def add_unidade_ponto_calibracao(request):
+    with transaction.atomic():
+        try:
+            if request.method == 'POST':
+
+                data = json.loads(request.body)
+                unidade_instrumento = data.get("unidade-instrumento").strip()
+
+                if Unidade.objects.filter(nome__iexact=unidade_instrumento).exists():
+                    return JsonResponse({'status': 'error', 'message': 'Este tipo de unidade já existe'}, status=400)
+
+                if unidade_instrumento and unidade_instrumento != "":
+                    Unidade.objects.create(
+                        nome=unidade_instrumento
+                    )
+
+                return JsonResponse({"data":data})
+        
+        except json.JSONDecodeError:
+            return JsonResponse({'status': 'error', 'message': 'Erro ao processar o JSON enviado'}, status=400)
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': str(e)}, status=500)

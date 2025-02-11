@@ -2,60 +2,313 @@
 {% load static %}
 
 {% block links %}
-    <link href="{% static 'css/timeline.css' %}" rel="stylesheet">
+    <link href="{% static 'css/selects.css' %}" rel="stylesheet">
 {% endblock %}
 
 {% block content %}
 
-
 <div class="d-flex justify-content-between mb-3">
     <h2>Plano Mestre</h2>
-    <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#designarMaisDeUmInstrumento"><i class="fa-solid fa-plus"></i> Add Instrumento</button>
+    <button type="button" id="buttonAddInstrumento" class="btn btn-primary btn-sm"><i class="fa-solid fa-plus"></i> Add Instrumento</button>
 </div>
 
-<table id="instrumentos-table" class="display table table-striped table-bordered">
+<table class="display table table-striped table-bordered">
     <thead>
         <tr>
+            <th></th>
             <th>Tag</th>
             <th>Instrumento</th>
             <th>Marca</th>
             <th>Status</th>
             <th>Tempo de calibração (em dias)</th>
+            <th>Editar</th>
         </tr>
     </thead>
     <tbody>
-        {% for instrumento in instrumentos_cadastrados %}
-        <tr>
-            <td>{{instrumento.tag}}</td>
-            <td>{{instrumento.tipo_instrumento}}</td>
-            <td>{{instrumento.marca}}</td>
-            <td>{{instrumento.status_instrumento}}</td>
-            <td>{{instrumento.tempo_calibracao}}</td>
-        </tr>
-        {% endfor %}
+        {% for item in instrumentos_com_pontos_calibracao %}
+            <tr class="main-row">
+                <td><button style="font-size: 10px;" class="btn btn-primary toggle-accordion"><i class="fa-solid fa-chevron-down"></i></button></td>
+                <td>{{ item.instrumento.tag }}</td>
+                <td>{{ item.instrumento.tipo_instrumento }}</td>
+                <td>{{ item.instrumento.marca }}</td>
+                <td>{{ item.instrumento.get_status_instrumento_display }}</td>
+                <td>{{ item.instrumento.tempo_calibracao }}</td>
+                <td>
+                    <button class="btn btn-primary open-modal"
+                            data-id="{{ item.instrumento.id }}"
+                            data-tag="{{ item.instrumento.tag }}"
+                            data-tipo="{{ item.instrumento.tipo_instrumento }}"
+                            data-marca="{{ item.instrumento.marca }}"
+                            data-status="{{ item.instrumento.get_status_instrumento_display }}"
+                            data-tempo="{{ item.instrumento.tempo_calibracao }}"
+                            data-ultima="{{ item.instrumento.ultima_calibracao|date:'Y-m-d' }}"
+                            data-proxima="{{ item.instrumento.proxima_calibracao|date:'Y-m-d' }}">
+                        Editar
+                    </button>
+                </td>
+            </tr>
+            <tr class="accordion-row" style="display: none;">
+                <td colspan="6">
+                    <div class="accordion-content">
+                        <h4>Pontos de Calibração</h4>
+                        <div class="list-group">
+                            <div class="row">
+                                {% for ponto in item.pontos_calibracao %}
+                                    <div class="col-md-4 mb-3">
+                                        <a href="#" class="list-group-item list-group-item-action" aria-current="true">
+                                            <div class="d-flex w-100 justify-content-between">
+                                            <h5 class="mb-1">{{ ponto.descricao }}</h5>
+                                            <small>{{ ponto.get_status_ponto_calibracao_display }}</small>
+                                            </div>
+                                            <p class="mb-1"><strong>Faixa Nominal: </strong>{{ ponto.faixa_nominal }}</p>
+                                            <small><strong>Unidade: </strong> {{ ponto.unidade }}</small>
+                                        </a>
+                                    </div>
+                                {% empty %}
+                                    <div class="col-md-12">
+                                        <p>Não há pontos de calibração cadastrados para este instrumento.</p>
+                                    </div>
+                                {% endfor %}
+                                <div class="col-md-4">
+                                    <!-- Botão para adicionar um novo ponto de calibração -->
+                                    <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#modalAdicionarPontoCalibracao" data-instrumento-id="{{ item.instrumento.id }}">
+                                        <i class="fa-solid fa-plus"></i>
+                                    </button>
+                                </div>
+                            </div>                        
+                        </div>
+                    </div>
+                </td>
+            </tr>
+        {% endfor %}    
     </tbody>
 </table>
+
+<div class="modal fade" id="modalAddInstrumento" data-bs-backdrop="static" data-bs-keyboard="false" aria-labelledby="modalAddInstrumentoLabel">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h1 class="modal-title fs-5" id="modalAddInstrumentoLabel">Adicione um instrumento ao plano mestre</h1>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <form id="formAddInstrumento">
+            <div class="modal-body">
+                <div class="row align-items-center">
+                    <div class="col-sm-6 mb-2">
+                        <label for="modal-add-tag">Tag</label>
+                        <input class="form-control" name="modal-add-tag" id="modal-add-tag" required>
+                    </div>
+                    <div class="col-10 col-sm-5 mb-2">
+                        <label for="modal-add-tipo">Tipo</label>
+                        <select class="form-control select2" name="modal-add-tipo" id="modal-add-tipo" required>
+                            <option value="Carregando...">Carregando...</option>
+                        </select>
+                    </div>
+                    <div class="col-1 col-sm-1 mt-3 p-0 position-relative">
+                        <a class="btn btn-primary toggle-dropdown">
+                            <i class="fa-solid fa-plus"></i>
+                        </a>
+                        <div class="dropdown-menu p-3 position-absolute translate-middle-x custom-dropdown" style="display: none; width: 250px; left: -80px">
+                            <label for="input-tipo-instrumento">Tipo do Instrumento</label>
+                            <input id="input-tipo-instrumento" type="text" class="form-control mb-2" placeholder="Ex:. Trena, Manômetro ...">
+                            <button id="add-novo-tipo" class="btn btn-success w-100">
+                                Criar novo tipo 
+                                <span class="spinner-border spinner-border-sm" style="display: none;"></span>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="col-sm-6 mb-2">
+                        <label for="modal-add-marca">Marca</label>
+                        <input class="form-control" name="modal-add-marca" id="modal-add-marca" required>
+                    </div>
+                    <div class="col-sm-6 mb-2">
+                        <label for="modal-add-status">Status</label>
+                        <select class="form-control" name="modal-add-status" id="modal-add-status" required>
+                            <option value="Carregando...">Carregando...</option>
+                        </select>
+                    </div>
+                    <div class="col-sm-6 mb-2">
+                        <label for="modal-add-tempo">Tempo p/ calibração (em dias)</label>
+                        <input type="number" class="form-control" name="modal-add-tempo" id="modal-add-tempo" required>
+                    </div>
+                    <div class="col-sm-6 mb-2">
+                        <label for="modal-add-ultima">Data última calib.</label>
+                        <input type="date" class="form-control" name="modal-add-ultima" id="modal-add-ultima" required>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="submit-adicionar-instrumento" type="submit" class="btn btn-primary d-flex align-items-center gap-2">
+                    <span>Adicionar</span>
+                    <span class="spinner-border spinner-border-sm" id="spinner-border-adicionar-instrumento" style="display: none;"></span>
+                </button>
+            </div>
+        </form>
+      </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modalEditar" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-labelledby="modalEditarLabel">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h1 class="modal-title fs-5" id="modalEditarLabel"></h1>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="row align-items-center">
+            <div class="col-sm-6 mb-2 d-none">
+                <label for="modal-edit-id">ID</label>
+                <input class="form-control" id="modal-edit-id">
+            </div>
+            <div class="col-sm-6 mb-2">
+                <label for="modal-edit-tag">Tag</label>
+                <input class="form-control" id="modal-edit-tag">
+            </div>
+            <div class="col-sm-6 mb-2">
+                <label for="modal-edit-tipo">Tipo</label>
+                <select class="form-control" name="modal-edit-tipo" id="modal-edit-tipo" disabled>
+                </select>
+            </div>
+            <div class="col-sm-6 mb-2">
+                <label for="modal-edit-marca">Marca</label>
+                <input class="form-control" id="modal-edit-marca">
+            </div>
+            <div class="col-sm-6 mb-2">
+                <label for="modal-edit-status">Status</label>
+                <select class="form-control" name="modal-edit-status" id="modal-edit-status">
+                    <option value="Carregando...">Carregando...</option>
+                </select>
+            </div>
+            <div class="col-sm-6 mb-2">
+                <label for="modal-edit-tempo">Tempo p/ calibração (em dias)</label>
+                <input type="number" class="form-control" id="modal-edit-tempo">
+            </div>
+            <div class="col-sm-6 mb-2">
+                <label for="modal-edit-ultima">Data última calib.</label>
+                <input type="date" class="form-control" id="modal-edit-ultima">
+            </div>
+            <div class="col-sm-6 mb-2">
+                <label for="modal-edit-proxima">Data prox. calib.</label>
+                <input type="date" class="form-control" id="modal-edit-proxima" disabled>
+            </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-primary">Editar</button>
+        </div>
+      </div>
+    </div>
+</div>
+</div>
+
+<!-- Modal Adicionar Ponto de Calibração -->
+<div class="modal fade" id="modalAdicionarPontoCalibracao" data-bs-backdrop="static" tabindex="-1" aria-labelledby="modalAdicionarPontoCalibracaoLabel">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="modalAdicionarPontoCalibracaoLabel">Adicionar Ponto de Calibração</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <form id="adicionar-ponto-calibracao">
+            <div class="modal-body">
+                <div class="row align-items-center">
+                    <input type="hidden" name="instrumento_id_ponto_calibracao" id="instrumento_id_ponto_calibracao">
+                    <div class="col-sm-6 mb-3">
+                        <label for="descricao-pc" class="form-label">Descrição</label>
+                        <input type="text" class="form-control" id="descricao-pc" name="descricao-pc" required>
+                    </div>
+                    <div class="col-10 col-sm-5 mb-2 mb-3">
+                        <label for="unidade-pc" class="form-label">Unidade</label>
+                        <select class="form-control select2" name="unidade-pc" id="unidade-pc" required>
+                            <option value="Carregando...">Carregando...</option>
+                        </select>
+                    </div>
+                    <div class="col-1 col-sm-1 mt-3 p-0 position-relative">
+                        <a class="btn btn-primary toggle-dropdown">
+                            <i class="fa-solid fa-plus"></i>
+                        </a>
+                        <div class="dropdown-menu p-3 position-absolute translate-middle-x custom-dropdown" style="display: none; width: 250px; left: -80px">
+                            <label for="">Unidade</label>
+                            <input id="input-unidade-instrumento" type="text" class="form-control mb-2" placeholder="Ex:. mm, Kg ...">
+                            <button id="add-nova-unidade" class="btn btn-success w-100">
+                                Criar nova unidade 
+                                <span class="spinner-border spinner-border-sm" style="display: none;"></span>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="col-sm-6 mb-3">
+                        <label for="faixa_nominal-pc" class="form-label">Faixa Nominal</label>
+                        <input type="text" class="form-control" id="faixa_nominal-pc" name="faixa_nominal-pc" required>
+                    </div>
+                    <div class="col-sm-6 mb-3">
+                        <label for="status-pc" class="form-label">Status</label>
+                        <select class="form-select" id="status-pc" name="status-pc" required>
+                            <option value="ativo">Ativo</option>
+                            <option value="inativo">Inativo</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="submit-adicionar-ponto-calibracao" type="submit" class="btn btn-primary d-flex align-items-center gap-2">
+                    <span>Adicionar</span>
+                    <span class="spinner-border spinner-border-sm" id="spinner-border-adicionar-ponto-calibracao" style="display: none;"></span>
+                </button>
+            </div>            
+        </form>
+      </div>
+    </div>
+  </div>
+  
 
 {% endblock %}
 
 {% block scripts %}
+<script src="{% static 'js/crud/editar-instrumento.js' %}"></script>
+<script src="{% static 'js/crud/add-instrumento.js' %}"></script>
+<script src="{% static 'js/crud/add-ponto-calibracao.js' %}"></script>
+<script src="{% static 'js/select2.js' %}"></script>
 <script>
-    $(document).ready(function () {
-        $('#instrumentos-table').DataTable({
-            "pageLength": 10,  // Define 10 itens por página
-            "lengthChange": false, // Oculta a opção de mudar a quantidade de itens por página
-            "ordering": true, // Permite ordenação
-            "language": {
-                "paginate": {
-                    "previous": "Anterior",
-                    "next": "Próximo"
-                },
-                "search": "Buscar:",
-                "zeroRecords": "Nenhum resultado encontrado",
-                "info": "Página _PAGE_ de _PAGES_",
-                "infoEmpty": "Nenhum registro disponível"
-            }
+    $(document).ready(function(){
+        // Função para habilitar o comportamento de dropdown
+        function enableDropdowns() {
+            $(".toggle-dropdown").each(function() {
+                var toggleButton = $(this);
+                var dropdown = toggleButton.next(".custom-dropdown");
+
+                // Exibe ou oculta o dropdown ao clicar no botão
+                toggleButton.click(function(event){
+                    event.stopPropagation();
+                    dropdown.toggle();
+                });
+
+                // Fecha o dropdown se o clique for fora do botão ou do dropdown
+                $(document).click(function(event){
+                    if (!$(event.target).closest(toggleButton.add(dropdown)).length) {
+                        dropdown.hide();
+                    }
+                });
+            });
+        }
+
+        // Habilita os dropdowns automaticamente
+        enableDropdowns();
+    });
+
+    document.addEventListener("DOMContentLoaded", function () {
+        document.querySelectorAll(".toggle-accordion").forEach(button => {
+            button.addEventListener("click", function () {
+                let row = this.closest("tr").nextElementSibling; // Obtém a linha do accordion
+                if (row.style.display === "none" || row.style.display === "") {
+                    row.style.display = "table-row";  // Exibe a linha
+                    this.innerHTML = '<i class="fa-solid fa-chevron-up"></i>';  // Muda o botão para "-"
+                } else {
+                    row.style.display = "none";  // Esconde a linha
+                    this.innerHTML = '<i class="fa-solid fa-chevron-down"></i>';  // Volta para "+"
+                }
+            });
         });
     });
 </script>
+
 {% endblock %}

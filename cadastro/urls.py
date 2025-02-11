@@ -10,7 +10,11 @@ urlpatterns = [
     path('instrumento/qrcode/<str:tag>/', views.qrcode_view, name='qrcode_view'),
     path('instrumento/historico/<str:tag>/<int:pk_ponto>/', views.historico_view, name='historico_view'),
 
-    path('cadastrar-instrumento/', views.cadastrar_instrumento, name='cadastrar_instrumento'),
+    path('template-instrumento/', views.template_instrumento, name='template_instrumento'),
+    path('add-instrumento/', views.add_instrumento, name='add-instrumentos'),
+    path('add-tipo-instrumento/', views.add_tipo_instrumento, name='add-tipo-instrumentos'),
+    path('adicionar-ponto-calibracao/', views.adicionar_ponto_calibracao, name='adicionar_ponto_calibracao'),
+    path('add-unidade-ponto-calibracao/', views.add_unidade_ponto_calibracao, name='add_unidade_ponto_calibracao'),
 
     path('substituir-instrumento/', views.substituir_instrumento, name='substituir_instrumento'),
     path('escolher-responsavel/', views.escolher_responsavel, name='escolher_responsavel'),

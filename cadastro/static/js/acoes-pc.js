@@ -38,7 +38,7 @@ document.getElementById('motivo-editar-responsavel').addEventListener('change', 
     document.getElementById('col-nome-editar-responsavel').style.opacity = 1;
 });
 
-document.getElementById('nome-editar-responsavel').addEventListener('change', function() {
+$(document).on('change.select2', '#nome-editar-responsavel', function() {
     toggleRowVisibility(this.value !== "");
 });
 

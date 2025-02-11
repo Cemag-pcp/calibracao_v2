@@ -143,7 +143,7 @@ class InfoInstrumento(models.Model):
         return 'http://127.0.0.1:8000'
 
     def __str__(self):
-        return f'{self.tag} - {self.tipo_instrumento.nome} - {self.marca.nome} - {self.status_instrumento}'
+        return f'{self.tag} - {self.status_instrumento}'
 
     class Meta:
         verbose_name = "Informação do Instrumento"
