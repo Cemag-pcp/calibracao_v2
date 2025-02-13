@@ -2,11 +2,12 @@ $(document).ready(function () {
     const table = $('#instrumentos-table').DataTable({
         processing: true,
         serverSide: true,
+        pageLength: 5, // Itens por página
+        lengthMenu: [[5, 10, 25, 50], [5, 10, 25, 50]], // Opções de paginação
         ajax: {
             url: '/instrumentos-data/', // URL da view criada
             type: 'GET',
             data: function (d) {
-
             }
         },
         columns: [
@@ -39,7 +40,7 @@ $(document).ready(function () {
                 }
             },
             { data: 'ultima_calibracao', title: 'Última Calibração' },
-            { data: 'proxima_calibracao', title: 'Próxima Calibração' },
+            { data: 'proxima_calibracao', title: 'Próxima Calibração', orderable: false },
             {
                 data: 'status_calibracao_string',
                 title: 'Status da Calibração',
@@ -66,7 +67,6 @@ $(document).ready(function () {
                 data: 'responsavel',
                 orderable: true,
                 render: function(data, type, row) {
-                    console.log(row)
                     if (row.status_calibracao === 'enviado') {
                         return ``
                     } else if (row.responsavel.matriculaNome === null) {
@@ -82,8 +82,16 @@ $(document).ready(function () {
                 render: function(data, type, row) {
 
                     const ultimoEnvioList = row.pontos_calibracao.map(ponto => ponto.ultimo_envio_pk);
-                    const analise_certificados = row.pontos_calibracao.map(ponto => ponto.analise_certificado);
+
+                    // Filtra os pontos onde ultimo_envio_pk não é null e mapeia os analise_certificado
+                    const analise_certificados = row.pontos_calibracao
+                        .filter(ponto => ponto.ultimo_envio_pk !== null)
+                        .map(ponto => ponto.analise_certificado);
+                    
+                    // Verifica se há algum certificado null na lista filtrada
                     const contem_null = analise_certificados.some(certificado => certificado === null);
+                    
+                    // Verifica se todos os certificados na lista filtrada são true
                     const todos_certificados_true = analise_certificados.every(certificado => certificado === true);
 
                     let buttons = `
@@ -111,7 +119,7 @@ $(document).ready(function () {
                                     </li>`
                         if(row.responsavel.id !== null) {
                             buttons += `<li>
-                                            <a class="dropdown-item" style="cursor:pointer"  onclick="alterarResponsavel('${row.tag}','${row.responsavel.id}')">
+                                            <a class="dropdown-item" style="cursor:pointer" responsavel-id="${row.responsavel.id}"  onclick="alterarResponsavel('${row.tag}','${row.responsavel.id}')">
                                                 Alterar Responsável
                                             </a>
                                         </li>`;
@@ -168,6 +176,7 @@ $(document).ready(function () {
         } else {
             row.child(format(row.data())).show();
             tr.addClass('shown');
+            console.log(row.data())
         }
     });
 
@@ -204,14 +213,14 @@ $(document).ready(function () {
                                         </div>
             
                                         <div class="mb-2">
-                                            ${d.status_calibracao === 'recebido' && p.analise_certificado === null && p.status_ponto_calibracao == 'ativo' ? 
+                                            ${d.status_calibracao === 'recebido' && p.analise_certificado === null && p.ultimo_envio_pk !== null && p.status_ponto_calibracao == 'ativo' ? 
                                                 `<strong>Calibração:</strong> <button class="btn badge btn-danger btn-sm" onclick="analisarCalibracao('${p.ultimo_envio_pk}','${d.tag}','${p.ponto_pk}')">Analisar</button>` :
                                                 ``
                                             }
                                         </div>
                                         <div>
                                             ${p.analise_certificado ? 
-                                            `<button class="btn badge btn-secondary btn-sm" onclick="ultimaAnalise('${p.ultimo_envio_pk}','${d.tag}','${p.ponto_pk}')">Última análise</button>`:
+                                            `<button class="btn badge btn-secondary btn-sm" onclick="ultimaAnalise('${p.ultimo_envio_pk}','${d.tag}','${p.ponto_pk}','${p.ultimo_pdf}')">Última análise</button>`:
                                             `<button class="btn badge btn-secondary btn-sm">Instrumento não possui análise</button>`
                                             }
                                         </div>

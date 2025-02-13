@@ -102,9 +102,9 @@
                         </div>
                     </div>
 
-                    <div class="row mb-3">
+                    <div class="row align-items-center mb-3">
                         <!-- Laboratório -->
-                        <div class="col-sm-4 mb-3">
+                        <div class="col-10 col-sm-4 mb-3">
                             <label for="laboratorio" class="form-label">Laboratório</label>
                             <select class="form-control" name="laboratorio" id="laboratorio" required>
                                 <option value="">------------</option>
@@ -112,6 +112,19 @@
                                 <option value="{{ laboratorio.id }}">{{ laboratorio.nome }}</option>
                                 {% endfor %}
                             </select>
+                        </div>
+                        <div class="col-1 col-sm-1 mt-3 p-0 position-relative">
+                            <a class="btn btn-primary toggle-dropdown">
+                                <i class="fa-solid fa-plus"></i>
+                            </a>
+                            <div class="dropdown-menu p-3 position-absolute translate-middle-x custom-dropdown" style="display: none; width: 250px; left: -80px">
+                                <label for="">Laboratório</label>
+                                <input id="input-laboratorio-instrumento" type="text" class="form-control mb-2" placeholder="Ex:. Labmetro, Instrusul ...">
+                                <button type="button" id="add-novo-laboratorio" class="btn btn-success w-100">
+                                    Criar novo laboratório 
+                                    <span class="spinner-border spinner-border-sm" style="display: none;"></span>
+                                </button>
+                            </div>
                         </div>
                         <!-- Natureza -->
                         <div class="col-sm-4 mb-3">
@@ -124,7 +137,7 @@
                             </select>
                         </div>
                         <!-- Método -->
-                        <div class="col-sm-4 mb-3">
+                        <div class="col-sm-3 mb-3">
                             <label for="metodo" class="form-label">Método</label>
                             <select class="form-control" name="metodo" id="metodo" required>
                                 <option value="">------------</option>
@@ -159,7 +172,10 @@
 
                     <!-- Botão de Envio -->
                     <div class="modal-footer">
-                        <button type="submit" class="btn btn-success">Enviar</button>
+                        <button id="submit-enviar-instrumento" type="submit" class="btn btn-success d-flex align-items-center gap-2">
+                            <span>Enviar</span>
+                            <span class="spinner-border spinner-border-sm" id="spinner-enviar-instrumento" style="display: none;"></span>
+                        </button>
                     </div>
                 </form>
             </div>
@@ -221,7 +237,10 @@
 
                     <!-- Botão de Envio -->
                     <div class="modal-footer">
-                        <button type="submit" class="btn btn-success">Enviar</button>
+                        <button id="submit-receber-instrumento" type="submit" class="btn btn-success d-flex align-items-center gap-2">
+                            <span>Receber</span>
+                            <span class="spinner-border spinner-border-sm" id="spinner-receber-instrumento" style="display: none;"></span>
+                        </button>
                     </div>
                 </form>
             </div>
@@ -259,7 +278,7 @@
                         <div class="col-sm-6">
                             <!-- Responsável pela análise -->
                             <label for="responsavelAnalise">Responsável da análise</label>
-                            <select class="form-control" name="responsavelAnalise" id="responsavelAnalise" required>
+                            <select class="form-control select2" name="responsavelAnalise" id="responsavelAnalise" required>
                                 <option value="">-------</option>
                                 {% for operador in operadores %}
                                 <option value="{{ operador.id }}">{{ operador.matricula }} - {{ operador.nome }}</option>
@@ -306,7 +325,10 @@
                     </div>
                     <!-- Botão de Envio -->
                     <div class="modal-footer">
-                        <button type="submit" class="btn btn-success">Enviar</button>
+                        <button id="submit-analisar-instrumento" type="submit" class="btn btn-success d-flex align-items-center gap-2">
+                            <span>Analisar</span>
+                            <span class="spinner-border spinner-border-sm" id="spinner-analisar-instrumento" style="display: none;"></span>
+                        </button>
                     </div>
                 </form>
             </div>
@@ -321,8 +343,8 @@
                 <h5 class="modal-title-ultima-analise" id="modal-title-ultima-analise">Modal Title</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
+            <form id="formUltimaAnalise">
             <div class="modal-body">
-                <form id="formUltimaAnalise">
                     
                     <input type="hidden" name="id-instrumento-ultima-analise" id="id-instrumento-ultima-analise">
                     
@@ -330,12 +352,12 @@
                         <div class="col-sm-6">
                             <!-- Incerteza -->
                             <label for="incertezaUltimaAnalise">Incerteza</label>
-                            <input class="form-control" type="number" name="incertezaUltimaAnalise" id="incertezaUltimaAnalise" step="0.1" disabled>
+                            <input class="form-control" type="number" name="incertezaUltimaAnalise" id="incertezaUltimaAnalise" step="0.1" required>
                         </div>
                         <div class="col-sm-6">
                             <!-- Tendência -->
                             <label for="tendeciaUltimaAnalise">Tendência</label>
-                            <input class="form-control" type="number" name="tendeciaUltimaAnalise" id="tendeciaUltimaAnalise" step="0.1" disabled>
+                            <input class="form-control" type="number" name="tendeciaUltimaAnalise" id="tendeciaUltimaAnalise" step="0.1" required>
                         </div>
                     </div>
 
@@ -349,7 +371,7 @@
                     
                             <!-- Análise final -->
                             <label for="resultadoUltimaAnalise">Resultado final</label>
-                            <select class="form-control" name="resultadoUltimaAnalise" id="resultadoUltimaAnalise" disabled>
+                            <select class="form-control" name="resultadoUltimaAnalise" id="resultadoUltimaAnalise" required>
                                 <option value="">-------</option>
                                 <option value="aprovado">Aprovado</option>
                                 <option value="reprovado">Reprovado</option>
@@ -375,8 +397,14 @@
                             <a href="#" id="certificadoAtualUltimaAnalise" target="_blank" rel="noopener noreferrer">Visualizar Certificado</a>
                         </div>
                     </div>
-                </form>
-            </div>
+                </div>
+                <div class="modal-footer">
+                    <button id="submit-ultima-analise" type="submit" class="btn btn-success d-flex align-items-center gap-2">
+                        <span>Editar</span>
+                        <span class="spinner-border spinner-border-sm" id="spinner-ultima-analise" style="display: none;"></span>
+                    </button>
+                </div>
+            </form>
         </div>
     </div>
 </div>
@@ -427,7 +455,10 @@
                     <div class="modal-footer justify-content-between">
                         <button type="button" class="btn btn-secondary" id="clear-signature">Limpar Assinatura</button>
                         <div>
-                            <button type="submit" class="btn btn-success">Enviar</button>
+                            <button id="submit-atribuir-instrumento-responsavel" type="submit" class="btn btn-success d-flex align-items-center gap-2">
+                                <span>Enviar</span>
+                                <span class="spinner-border spinner-border-sm" id="spinner-atribuir-instrumento-responsavel" style="display: none;"></span>
+                            </button>
                         </div>
                     </div>
                 </form>
@@ -502,7 +533,10 @@
                 <div class="modal-footer justify-content-between">
                     <button type="button" class="btn btn-secondary hide-row" id="clear-signature-edicao">Limpar Assinatura</button>
                     <div>
-                        <button type="submit" class="btn btn-success">Enviar</button>
+                        <button id="submit-alterar-instrumento-responsavel" type="submit" class="btn btn-success d-flex align-items-center gap-2">
+                            <span>Enviar</span>
+                            <span class="spinner-border spinner-border-sm" id="spinner-alterar-instrumento-responsavel" style="display: none;"></span>
+                        </button>
                     </div>
                 </div>
             </form>
@@ -549,7 +583,12 @@
                 </div>
             </div>
             <div class="modal-footer">
-                <button type="submit" class="btn btn-primary">Confirmar</button>
+                <div>
+                    <button id="submit-substituicao-instrumento" type="submit" class="btn btn-success d-flex align-items-center gap-2">
+                        <span>Confirmar</span>
+                        <span class="spinner-border spinner-border-sm" id="spinner-substituicao-instrumento" style="display: none;"></span>
+                    </button>
+                </div>
             </div>
         </form>
         <form class="d-none" id="statusInstrumentoDevolucao">
@@ -577,6 +616,12 @@
             </div>
             <div class="modal-footer">
                 <button type="submit" class="btn btn-primary">Confirmar</button>
+                <div>
+                    <button id="submit-substituicao-instrumento" type="submit" class="btn btn-success d-flex align-items-center gap-2">
+                        <span>Enviar</span>
+                        <span class="spinner-border spinner-border-sm" id="spinner-substituicao-instrumento" style="display: none;"></span>
+                    </button>
+                </div>
             </div>
         </form>
       </div>
@@ -625,7 +670,10 @@
                 </div>
                 <div class="modal-footer d-flex justify-content-between">
                     <a class="btn btn-secondary" id="clear-signature-add-instrumentos">Limpar Assinatura</a>
-                    <button type="submit" class="btn btn-primary">Confirmar</button>
+                    <button id="submit-designar-mais-instrumento-responsavel" type="submit" class="btn btn-success d-flex align-items-center gap-2">
+                        <span>Confirmar</span>
+                        <span class="spinner-border spinner-border-sm" id="spinner-designar-mais-instrumento-responsavel" style="display: none;"></span>
+                    </button>
                 </div>
             </form>
         </div>
@@ -642,4 +690,8 @@
     <script src="{% static 'js/select2.js' %}"></script>
     <script src="{% static 'js/add-varios-instrumentos.js' %}"></script>
     <script src="{% static 'js/designar-mais-instrumentos.js' %}"></script>
+    <script src="{% static 'js/crud/dropdown.js' %}"></script>
+    <script src="{% static 'js/crud/add-laboratorio.js' %}"></script>
+    <script src="{% static 'js/crud/editar-ultima-analise.js' %}"></script>
+
 {% endblock %}

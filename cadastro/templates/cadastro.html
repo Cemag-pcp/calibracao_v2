@@ -1,6 +1,10 @@
 {% extends "base.html" %}
 {% load static %}
 
+<style>
+
+</style>
+
 {% block links %}
     <link href="{% static 'css/selects.css' %}" rel="stylesheet">
 {% endblock %}
@@ -12,7 +16,7 @@
     <button type="button" id="buttonAddInstrumento" class="btn btn-primary btn-sm"><i class="fa-solid fa-plus"></i> Add Instrumento</button>
 </div>
 
-<table class="display table table-striped table-bordered">
+<table id="example" class="display table table-striped table-bordered">
     <thead>
         <tr>
             <th></th>
@@ -20,7 +24,8 @@
             <th>Instrumento</th>
             <th>Marca</th>
             <th>Status</th>
-            <th>Tempo de calibração (em dias)</th>
+            <th style="width: 150px;">Tempo de calibração (em dias)</th>
+            <th style="width: 150px;">Possui ponto de calibração?</th>
             <th>Editar</th>
         </tr>
     </thead>
@@ -33,6 +38,13 @@
                 <td>{{ item.instrumento.marca }}</td>
                 <td>{{ item.instrumento.get_status_instrumento_display }}</td>
                 <td>{{ item.instrumento.tempo_calibracao }}</td>
+                <td>
+                    {% if item.pontos_calibracao %} 
+                        <i class="fa-solid fa-circle fa-circle-check"  style="color:rgb(0, 124, 37);"></i> 
+                    {% else %} 
+                        <i class="fa-solid fa-circle-xmark" style="color: #ff0000;"></i> 
+                    {% endif %}
+                </td>
                 <td>
                     <button class="btn btn-primary open-modal"
                             data-id="{{ item.instrumento.id }}"
@@ -55,7 +67,8 @@
                             <div class="row">
                                 {% for ponto in item.pontos_calibracao %}
                                     <div class="col-md-4 mb-3">
-                                        <a href="#" class="list-group-item list-group-item-action" aria-current="true">
+                                        <a class="list-group-item list-group-item-action" style="cursor: pointer;" aria-current="true" 
+                                        onclick="editarPontoCalibracao('{{ ponto.id }}', '{{ ponto.instrumento.tag }}', '{{ ponto.descricao }}', '{{ponto.status_ponto_calibracao}}', '{{ ponto.faixa_nominal }}', '{{ ponto.unidade }}', '{{ ponto.tolerancia_admissivel }}')">
                                             <div class="d-flex w-100 justify-content-between">
                                             <h5 class="mb-1">{{ ponto.descricao }}</h5>
                                             <small>{{ ponto.get_status_ponto_calibracao_display }}</small>
@@ -70,7 +83,6 @@
                                     </div>
                                 {% endfor %}
                                 <div class="col-md-4">
-                                    <!-- Botão para adicionar um novo ponto de calibração -->
                                     <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#modalAdicionarPontoCalibracao" data-instrumento-id="{{ item.instrumento.id }}">
                                         <i class="fa-solid fa-plus"></i>
                                     </button>
@@ -155,48 +167,54 @@
           <h1 class="modal-title fs-5" id="modalEditarLabel"></h1>
           <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
         </div>
+        <form id="form-edit">
         <div class="modal-body">
-          <div class="row align-items-center">
-            <div class="col-sm-6 mb-2 d-none">
-                <label for="modal-edit-id">ID</label>
-                <input class="form-control" id="modal-edit-id">
-            </div>
-            <div class="col-sm-6 mb-2">
-                <label for="modal-edit-tag">Tag</label>
-                <input class="form-control" id="modal-edit-tag">
-            </div>
-            <div class="col-sm-6 mb-2">
-                <label for="modal-edit-tipo">Tipo</label>
-                <select class="form-control" name="modal-edit-tipo" id="modal-edit-tipo" disabled>
-                </select>
-            </div>
-            <div class="col-sm-6 mb-2">
-                <label for="modal-edit-marca">Marca</label>
-                <input class="form-control" id="modal-edit-marca">
-            </div>
-            <div class="col-sm-6 mb-2">
-                <label for="modal-edit-status">Status</label>
-                <select class="form-control" name="modal-edit-status" id="modal-edit-status">
-                    <option value="Carregando...">Carregando...</option>
-                </select>
-            </div>
-            <div class="col-sm-6 mb-2">
-                <label for="modal-edit-tempo">Tempo p/ calibração (em dias)</label>
-                <input type="number" class="form-control" id="modal-edit-tempo">
-            </div>
-            <div class="col-sm-6 mb-2">
-                <label for="modal-edit-ultima">Data última calib.</label>
-                <input type="date" class="form-control" id="modal-edit-ultima">
-            </div>
-            <div class="col-sm-6 mb-2">
-                <label for="modal-edit-proxima">Data prox. calib.</label>
-                <input type="date" class="form-control" id="modal-edit-proxima" disabled>
+            <div class="row align-items-center">
+                <div class="col-sm-6 mb-2 d-none">
+                    <label for="modal-edit-id">ID</label>
+                    <input class="form-control" name="modal-edit-id" id="modal-edit-id">
+                </div>
+                <div class="col-sm-6 mb-2">
+                    <label for="modal-edit-tag">Tag</label>
+                    <input class="form-control" name="modal-edit-tag" id="modal-edit-tag">
+                </div>
+                <div class="col-sm-6 mb-2">
+                    <label for="modal-edit-tipo">Tipo</label>
+                    <select class="form-control" name="modal-edit-tipo" id="modal-edit-tipo">
+                        <option value="Carregando...">Carregando...</option>
+                    </select>
+                </div>
+                <div class="col-sm-6 mb-2">
+                    <label for="modal-edit-marca">Marca</label>
+                    <input class="form-control" name="modal-edit-marca" id="modal-edit-marca">
+                </div>
+                <div class="col-sm-6 mb-2">
+                    <label for="modal-edit-status">Status</label>
+                    <select class="form-control" name="modal-edit-status" id="modal-edit-status">
+                        <option value="Carregando...">Carregando...</option>
+                    </select>
+                </div>
+                <div class="col-sm-6 mb-2">
+                    <label for="modal-edit-tempo">Tempo p/ calibração (em dias)</label>
+                    <input type="number" class="form-control" name="modal-edit-tempo" id="modal-edit-tempo">
+                </div>
+                <div class="col-sm-6 mb-2">
+                    <label for="modal-edit-ultima">Data última calib.</label>
+                    <input type="date" class="form-control" name="modal-edit-ultima" id="modal-edit-ultima">
+                </div>
+                <div class="col-sm-6 mb-2">
+                    <label for="modal-edit-proxima">Data prox. calib.</label>
+                    <input type="date" class="form-control" name="modal-edit-proxima" id="modal-edit-proxima" disabled>
+                </div>
             </div>
         </div>
         <div class="modal-footer">
-          <button type="button" class="btn btn-primary">Editar</button>
+            <button id="submit-editar-instrumento" type="submit" class="btn btn-primary d-flex align-items-center gap-2">
+                <span>Editar</span>
+                <span class="spinner-border spinner-border-sm" id="spinner-border-editar-instrumento" style="display: none;"></span>
+            </button>
         </div>
-      </div>
+        </form>
     </div>
 </div>
 </div>
@@ -247,6 +265,10 @@
                             <option value="inativo">Inativo</option>
                         </select>
                     </div>
+                    <div class="col-sm-6 mb-3">
+                        <label for="tolerancia-pc" class="form-label">Tolerância Admissível</label>
+                        <input type="number" min="0" step="0.01" class="form-control" id="tolerancia-pc" name="tolerancia-pc" required>
+                    </div>
                 </div>
             </div>
             <div class="modal-footer">
@@ -260,6 +282,56 @@
     </div>
   </div>
   
+<div class="modal fade" id="modalEditPontoCalibracao" data-bs-backdrop="static" data-bs-keyboard="false" aria-labelledby="modalEditPontoCalibracaoLabel">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h1 class="modal-title fs-5" id="modalEditPontoCalibracaoLabel">Adicione um instrumento ao plano mestre</h1>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <form id="formEditPontoCalibracao">
+            <div class="modal-body">
+                <div class="row align-items-center">
+                    <input class="form-control" type="hidden" id="modal-edit-pc-id" name="modal-edit-pc-id">
+                    <div class="col-sm-6 mb-2">
+                        <label for="modal-edit-pc-tag">Tag</label>
+                        <input class="form-control" name="modal-edit-pc-tag" id="modal-edit-pc-tag" disabled>
+                    </div>
+                    <div class="col-10 col-sm-6 mb-2">
+                        <label for="modal-edit-pc-descricao">Descrição</label>
+                        <input class="form-control" name="modal-edit-pc-descricao" id="modal-edit-pc-descricao" required>
+                    </div>
+                    <div class="col-sm-6 mb-2">
+                        <label for="modal-edit-pc-status">Status</label>
+                        <select class="form-control" name="modal-edit-pc-status" id="modal-edit-pc-status" required>
+                            <option value="ativo">Ativo</option>
+                            <option value="inativo">Inativo</option>
+                        </select>
+                    </div>
+                    <div class="col-sm-6 mb-2">
+                        <label for="modal-edit-pc-faixa-nominal">Faixa Nonimal</label>
+                        <input class="form-control" name="modal-edit-pc-faixa-nominal" id="modal-edit-pc-faixa-nominal" required>
+                    </div>
+                    <div class="col-sm-6 mb-2">
+                        <label for="modal-edit-pc-unidade">Unidade</label>
+                        <input class="form-control" name="modal-edit-pc-unidade" id="modal-edit-pc-unidade" required>
+                    </div>
+                    <div class="col-sm-6 mb-2">
+                        <label for="modal-edit-pc-tolerancia-admissivel">Tolerância Admissível</label>
+                        <input type="number" min="0" step="0.01" class="form-control" name="modal-edit-pc-tolerancia-admissivel" id="modal-edit-pc-tolerancia-admissivel" required>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="submit-edit-pc-instrumento" type="submit" class="btn btn-primary d-flex align-items-center gap-2">
+                    <span>Editar</span>
+                    <span class="spinner-border spinner-border-sm" id="spinner-border-edit-pc-instrumento" style="display: none;"></span>
+                </button>
+            </div>
+        </form>
+      </div>
+    </div>
+</div>
 
 {% endblock %}
 
@@ -267,34 +339,10 @@
 <script src="{% static 'js/crud/editar-instrumento.js' %}"></script>
 <script src="{% static 'js/crud/add-instrumento.js' %}"></script>
 <script src="{% static 'js/crud/add-ponto-calibracao.js' %}"></script>
+<script src="{% static 'js/crud/dropdown.js' %}"></script>
+<script src="{% static 'js/crud/editar-ponto.js' %}"></script>
 <script src="{% static 'js/select2.js' %}"></script>
 <script>
-    $(document).ready(function(){
-        // Função para habilitar o comportamento de dropdown
-        function enableDropdowns() {
-            $(".toggle-dropdown").each(function() {
-                var toggleButton = $(this);
-                var dropdown = toggleButton.next(".custom-dropdown");
-
-                // Exibe ou oculta o dropdown ao clicar no botão
-                toggleButton.click(function(event){
-                    event.stopPropagation();
-                    dropdown.toggle();
-                });
-
-                // Fecha o dropdown se o clique for fora do botão ou do dropdown
-                $(document).click(function(event){
-                    if (!$(event.target).closest(toggleButton.add(dropdown)).length) {
-                        dropdown.hide();
-                    }
-                });
-            });
-        }
-
-        // Habilita os dropdowns automaticamente
-        enableDropdowns();
-    });
-
     document.addEventListener("DOMContentLoaded", function () {
         document.querySelectorAll(".toggle-accordion").forEach(button => {
             button.addEventListener("click", function () {
@@ -309,6 +357,7 @@
             });
         });
     });
+    
 </script>
 
 {% endblock %}

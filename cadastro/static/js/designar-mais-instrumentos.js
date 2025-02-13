@@ -8,6 +8,8 @@ function modalDesignarMaisInstrumento() {
 
     // Resetar o formulário original
     document.getElementById('form-designar-varios-instrumentos').reset();
+    document.getElementById('select2-funcionario-designar-varios-instrumentos-container').title = "Selecione um funcionário"
+    document.getElementById('select2-funcionario-designar-varios-instrumentos-container').textContent = "Selecione um funcionário"
 
     // Antes de abrir o modal, limpar todos os clones, mantendo apenas o original
     const existingElements = document.querySelectorAll('.designar-varios-instrumentos');

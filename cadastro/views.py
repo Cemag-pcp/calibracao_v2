@@ -5,6 +5,7 @@ from django.http import JsonResponse
 from django.db.models import Q, Prefetch
 from django.core.cache import cache
 from django.db import transaction
+from django.db.utils import IntegrityError
 from django.utils.dateparse import parse_date
 from django.core.files.base import ContentFile
 
@@ -23,6 +24,8 @@ import uuid
 def calcular_status_calibracao(ultimo_envio, proxima_calibracao, hoje):
     if ultimo_envio and ultimo_envio.status == 'enviado':
         return 'Em calibração'
+    elif ultimo_envio and ultimo_envio.status == 'recebido' and not ultimo_envio.analise:
+        return 'A analisar'
     elif proxima_calibracao:
         if proxima_calibracao >= hoje:
             dias_para_vencer = (proxima_calibracao - hoje).days
@@ -78,22 +81,35 @@ def home(request):
                                          'motivos':motivos,
                                          'instrumentos':instrumento})
 
-from django.db.models import Prefetch
-from django.core.paginator import Paginator
-from django.http import JsonResponse
-from datetime import datetime
-import time
-
 def instrumentos_data(request):
     hoje = datetime.now().date()
     start_date = time.time()
 
+    # Parâmetros do DataTables
+    draw = int(request.GET.get('draw', 1))
+    start = int(request.GET.get('start', 0))
+    length = int(request.GET.get('length', 5))
+    search_value = request.GET.get('search[value]', '')
+    order_column_index = int(request.GET.get('order[0][column]', 0))
+    order_direction = request.GET.get('order[0][dir]', 'asc')
+
+    # Mapeamento de colunas para ordenação
+    column_map = {
+        0: 'tag',
+        1: 'tipo_instrumento__nome',
+        2: 'status_instrumento',
+        3: 'ultima_calibracao',
+        4: 'proxima_calibracao',
+        5: 'status_calibracao_string',
+    }
+    order_column = column_map.get(order_column_index, 'tag')
+
     # Pré-carregar envios e análises de certificados
     envios_prefetch = Prefetch(
-        'ponto',  # Substitua por 'envio_set' se o related_name não for 'envios'
+        'ponto',
         queryset=Envio.objects.prefetch_related(
             Prefetch(
-                'analise_envio',  # related_name no modelo AnaliseCertificado
+                'analise_envio',
                 queryset=AnaliseCertificado.objects.all()
             )
         ).order_by('-id')
@@ -109,19 +125,42 @@ def instrumentos_data(request):
         queryset=AssinaturaInstrumento.objects.order_by('-data_assinatura')
     )
 
-    instrumentos = InfoInstrumento.objects.prefetch_related(
+    # Consulta otimizada
+    instrumentos_queryset = InfoInstrumento.objects.select_related(
+        'tipo_instrumento', 'marca'
+    ).prefetch_related(
         pontos_calibracao_prefetch,
         assinaturas_prefetch,
         'designar_instrumento'
-    ).all()
+    ).filter(pontos_calibracao__isnull=False).distinct()
+
+    # Aplicar filtro de busca
+    if search_value:
+        instrumentos_queryset = instrumentos_queryset.filter(
+            Q(tag__icontains=search_value) |
+            Q(tipo_instrumento__nome__icontains=search_value) |
+            Q(status_instrumento__icontains=search_value) |
+            Q(ultima_calibracao__icontains=search_value) |
+            Q(proxima_calibracao__icontains=search_value)
+        )
+
+    # Aplicar ordenação
+    if order_direction == 'desc':
+        order_column = f'-{order_column}'
+    instrumentos_queryset = instrumentos_queryset.order_by(order_column)
+
+    # Paginação
+    total_registros = instrumentos_queryset.count()
+    instrumentos = instrumentos_queryset[start:start + length]
 
     instrumentos_detalhes = {}
+    print(instrumentos_queryset)
     for instrumento in instrumentos:
         ultima_assinatura = instrumento.assinatura_instrumento.first()
         ultimo_assinante = ultima_assinatura.assinante if ultima_assinatura else None
 
         for ponto in instrumento.pontos_calibracao.all():
-            ultimo_envio = ponto.ponto.first()  # Substitua por 'envio_set' se necessário
+            ultimo_envio = ponto.ponto.first()
             analise_certificado = ultimo_envio.analise_envio.first() if ultimo_envio else None
 
             status_calibracao = calcular_status_calibracao(ultimo_envio, instrumento.proxima_calibracao, hoje)
@@ -162,21 +201,11 @@ def instrumentos_data(request):
                 'ultimo_pdf': ultimo_envio.pdf if ultimo_envio else None,
             })
 
-    # Paginação
-    page = int(request.GET.get('start', 0)) // int(request.GET.get('length', 10)) + 1
-    limit = int(request.GET.get('length', 10))
-    paginator = Paginator(list(instrumentos_detalhes.values()), limit)
-
-    try:
-        instrumentos_page = paginator.page(page)
-    except EmptyPage:
-        instrumentos_page = []
-
     data = {
-        'draw': int(request.GET.get('draw', 1)),
-        'recordsTotal': paginator.count,
-        'recordsFiltered': paginator.count,
-        'data': list(instrumentos_page),
+        'draw': draw,
+        'recordsTotal': total_registros,
+        'recordsFiltered': total_registros,
+        'data': list(instrumentos_detalhes.values()),
     }
 
     end_date = time.time()
@@ -196,43 +225,52 @@ def designar_instrumentos(request):
                 assinatura_base64 = data.get('signature')
                 data_entrega = data.get('data-designar-varios-instrumentos')
 
-                if not funcionario_id or not instrumentos_ids or not assinatura_base64 or not data_entrega:
+                # Verificação de dados
+                if not all([funcionario_id, instrumentos_ids, assinatura_base64, data_entrega]):
                     return JsonResponse({"sucesso": False, "erro": "Dados incompletos"}, status=400)
 
+                # Buscar o funcionário
                 funcionario = Funcionario.objects.get(id=funcionario_id)
 
+                # Converter a data de entrega
                 data_entrega = datetime.fromisoformat(data_entrega).date()
 
+                # Decodificar a assinatura uma única vez
                 format, imgstr = assinatura_base64.split(';base64,') 
                 ext = format.split('/')[-1]  # Extensão do arquivo, como 'png', 'jpg', etc.
-                
-                # Gerar um UUID para o nome do arquivo
                 file_name = f"{uuid.uuid4()}.{ext}"
-
-                # Criar o arquivo a partir da string base64
                 assinatura_path = ContentFile(base64.b64decode(imgstr), name=file_name)
 
-                for instrumento_id in instrumentos_ids:
-                    instrumento = InfoInstrumento.objects.get(id=instrumento_id)
+                # Buscar todos os instrumentos de uma vez
+                instrumentos = InfoInstrumento.objects.filter(id__in=instrumentos_ids)
 
+                # Listas para bulk_create
+                designacoes = []
+                assinaturas = []
+
+                for instrumento in instrumentos:
                     # Criar a designação do instrumento com a data especificada
-                    DesignarInstrumento.objects.create(
+                    designacoes.append(DesignarInstrumento(
                         instrumento_escolhido=instrumento,
                         responsavel=funcionario,
                         data_entrega_funcionario=data_entrega
-                    )
+                    ))
 
                     # Criar a assinatura associada
-                    AssinaturaInstrumento.objects.create(
+                    assinaturas.append(AssinaturaInstrumento(
                         instrumento=instrumento,
                         assinante=funcionario,
                         foto_assinatura=assinatura_path,
                         data_entrega=data_entrega,
                         motivo='Entrega'
-                    )
+                    ))
 
                     descricao = f"Atribuindo a responsabilidade para: {funcionario.matricula} - {funcionario.nome} na data {data_entrega}"
                     registrar_primeiro_responsavel(instrumento, descricao)
+
+                # Inserir todas as designações e assinaturas de uma vez
+                DesignarInstrumento.objects.bulk_create(designacoes)
+                AssinaturaInstrumento.objects.bulk_create(assinaturas)
 
                 return JsonResponse({"sucesso": True})
             
@@ -240,9 +278,15 @@ def designar_instrumentos(request):
                 return JsonResponse({"sucesso": False, "erro": str(e)}, status=500)
         
     elif request.method == 'GET':
-        # Deve pegar todos os instrumentos que não possui designação
+        # Deve pegar todos os instrumentos que não possuem designação e que possuem pelo menos um ponto de calibração ativo
         enviados_instrument_ids = Envio.objects.filter(status='enviado').values_list('instrumento_id', flat=True)
-        instrumentos = InfoInstrumento.objects.exclude(designar_instrumento__isnull = False).exclude(id__in=enviados_instrument_ids).filter(status_instrumento='ativo')
+        
+        # Filtra os instrumentos que não têm designação, não foram enviados, estão ativos e possuem pelo menos um ponto de calibração ativo
+        instrumentos = InfoInstrumento.objects.exclude(designar_instrumento__isnull=False) \
+                                            .exclude(id__in=enviados_instrument_ids) \
+                                            .filter(status_instrumento='ativo') \
+                                            .filter(pontos_calibracao__status_ponto_calibracao='ativo').distinct()
+        
         instrumentos_data = list(instrumentos.values('id', 'tag'))
 
         return JsonResponse({"sucesso": True, "instrumentos": instrumentos_data})
@@ -624,7 +668,7 @@ def template_instrumento(request):
 def add_instrumento(request):
 
     if request.method == 'POST':
-
+        
         start_time = time.time()
 
         data = request.POST
@@ -654,7 +698,7 @@ def add_instrumento(request):
 
             tipo = TipoInstrumento.objects.select_related().get(nome=tipo_nome)
             marca, _ = Marca.objects.get_or_create(nome=marca_nome)
-
+            
             # Criando o novo instrumento
             novo_instrumento = InfoInstrumento(
                 tag=tag,
@@ -684,7 +728,7 @@ def add_instrumento(request):
 
         start_time = time.time()
     
-        list_status = [status[1] for status in InfoInstrumento.STATUS_INSTRUMENTO_CHOICES]
+        list_status = [status[1] for status in InfoInstrumento.STATUS_INSTRUMENTO_CHOICES if status[1] in ['Ativo','Inativo', 'Desuso']]
 
         lists_type = TipoInstrumento.objects.values_list('nome', flat=True)
 
@@ -696,6 +740,82 @@ def add_instrumento(request):
         print(duration)
 
         return JsonResponse({"statusList": list_status, "typeList": list_type})
+
+def edit_instrumento(request):
+
+    if request.method == 'POST':
+
+        with transaction.atomic():
+
+            try:
+                data = json.loads(request.body)
+                
+                id = data.get("modal-edit-id")
+                tag = data.get("modal-edit-tag")
+                tipo_nome = data.get("modal-edit-tipo")
+                marca_nome = data.get("modal-edit-marca")
+                status_exibido = data.get("modal-edit-status")
+                tempo_calib = data.get("modal-edit-tempo")
+                ultima_calib = data.get("modal-edit-ultima")
+
+                # Busca o instrumento ou retorna erro se não existir
+                instrumento = get_object_or_404(InfoInstrumento, id=id)
+
+                ultimo_envio = Envio.objects.filter(instrumento=instrumento).order_by('-id').first()
+                if ultimo_envio and ultimo_envio.status == 'enviado':
+                    return JsonResponse({"message": "Não é possível editar um instrumento enquanto estiver em processo de calibração."}, status=400)
+
+                # Dicionário para armazenar alterações
+                alteracoes = {}
+
+                # Verifica cada campo e adiciona ao dicionário se houve mudança
+                if tag and instrumento.tag != tag:
+                    alteracoes["tag"] = tag
+                
+                if tipo_nome:
+                    tipo_instrumento = TipoInstrumento.objects.select_related().get(nome=tipo_nome)
+                    if instrumento.tipo_instrumento != tipo_instrumento:
+                        alteracoes["tipo_instrumento"] = tipo_instrumento
+                
+                if marca_nome:
+                    marca, created = Marca.objects.get_or_create(nome=marca_nome)
+                    if instrumento.marca != marca:
+                        alteracoes["marca"] = marca
+                
+                # Mapeia status de exibição para chave armazenada no banco
+                STATUS_DICT = dict(InfoInstrumento.STATUS_INSTRUMENTO_CHOICES)
+                status = next((key for key, value in STATUS_DICT.items() if value == status_exibido), None)
+
+                if status is None:
+                    return JsonResponse({"error": "Status inválido"}, status=400)
+                
+                if status and instrumento.status_instrumento != status:
+                    alteracoes["status_instrumento"] = status
+                
+                if tempo_calib and instrumento.tempo_calibracao != int(tempo_calib):
+                    alteracoes["tempo_calibracao"] = int(tempo_calib)
+
+                if ultima_calib:
+                    ultima_calibracao_date = parse_date(ultima_calib)
+                    if instrumento.ultima_calibracao != ultima_calibracao_date:
+                        alteracoes["ultima_calibracao"] = ultima_calibracao_date
+
+                # Se houver mudanças, atualiza e salva o objeto
+                if alteracoes:
+                    for campo, valor in alteracoes.items():
+                        setattr(instrumento, campo, valor)
+                    instrumento.save()
+                    return JsonResponse({"message": "Instrumento atualizado com sucesso!"})
+
+                return JsonResponse({"message": "Nenhuma alteração realizada."})
+            
+            except IntegrityError as e:
+                return JsonResponse({"message": f"Verifique se a tag que está sendo criada já existe: {e}"}, status=400)
+            
+            except Exception as e:
+                return JsonResponse({"message": f"Nenhuma alteração realizada. {e}"}, status=400)
+
+    return JsonResponse({"message": "Método não permitido"}, status=405)
 
 def add_tipo_instrumento(request):
 
@@ -733,17 +853,24 @@ def adicionar_ponto_calibracao(request):
             descricao = data.get('descricao-pc')
             faixa_nominal = data.get('faixa_nominal-pc')
             unidade = data.get('unidade-pc')
+            tolerancia_admissivel = data.get('tolerancia-pc')
             status = data.get('status-pc', 'ativo')  # Status padrão é 'ativo'
 
             # Busca as referências para 'instrumento' e 'unidade'
             instrumento = InfoInstrumento.objects.get(id=instrumento_id)
+
+            ultimo_envio = Envio.objects.filter(instrumento=instrumento).order_by('-id').first()
+            if ultimo_envio and ultimo_envio.status == 'enviado':
+                return JsonResponse({"message": "Não é possível adicionar um ponto de calibração enquanto o item estiver em processo de calibração."}, status=400)
+
             unidade = Unidade.objects.get(nome=unidade)
 
             PontoCalibracao.objects.create(
                 descricao=descricao,
                 instrumento=instrumento,
-                faixa_nominal=faixa_nominal,
                 unidade=unidade,
+                faixa_nominal=faixa_nominal,
+                tolerancia_admissivel=tolerancia_admissivel,
                 status_ponto_calibracao=status
             )
 
@@ -764,11 +891,78 @@ def adicionar_ponto_calibracao(request):
 
     return JsonResponse({"error": "Método não permitido"}, status=405)
 
-def add_unidade_ponto_calibracao(request):
-    with transaction.atomic():
-        try:
-            if request.method == 'POST':
+def editar_ponto_calibracao(request):
 
+    if request.method == 'POST':
+
+        with transaction.atomic():
+
+            try:
+                data = json.loads(request.body)
+                
+                pc_id = data.get('modal-edit-pc-id')
+                descricao = data.get('modal-edit-pc-descricao')
+                faixa_nominal = data.get('modal-edit-pc-faixa-nominal')
+                unidade_str = data.get('modal-edit-pc-unidade').strip()
+                tolerancia_admissivel = data.get('modal-edit-pc-tolerancia-admissivel')
+                status = data.get('modal-edit-pc-status', 'Ativo')  # Status padrão é 'ativo'
+
+                # Busca o instrumento ou retorna erro se não existir
+                ponto_calibracao = get_object_or_404(PontoCalibracao, id=pc_id)
+
+                # Verifica o status do último envio
+                ultimo_envio = Envio.objects.filter(ponto_calibracao=ponto_calibracao).order_by('-id').first()
+                if ultimo_envio and ultimo_envio.status == 'enviado':
+                    return JsonResponse({"message": "Não é possível editar o ponto de calibração enquanto o item estiver em processo de calibração."}, status=400)
+
+                try:
+                    tolerancia_admissivel = float(tolerancia_admissivel)
+                except Exception as e:
+                    return JsonResponse({"message": "Tolerância admissivel deve ser um número"}, 400)
+
+                # Dicionário para armazenar alterações
+                alteracoes = {}
+
+                if unidade_str and ponto_calibracao.unidade != unidade_str:
+                    alteracoes["unidade"] = unidade_str
+
+                if status is None:
+                    return JsonResponse({"error": "Status inválido"}, status=400)
+                
+                if status and ponto_calibracao.status_ponto_calibracao != status:
+                    alteracoes["status_ponto_calibracao"] = status
+                
+                if descricao and ponto_calibracao.descricao != descricao:
+                    alteracoes["descricao"] = descricao
+
+                if faixa_nominal and ponto_calibracao.faixa_nominal != faixa_nominal:
+                    alteracoes["faixa_nominal"] = faixa_nominal
+                
+                if tolerancia_admissivel and ponto_calibracao.tolerancia_admissivel != tolerancia_admissivel:
+                    alteracoes["tolerancia_admissivel"] = tolerancia_admissivel
+
+                # Se houver mudanças, atualiza e salva o objeto
+                if alteracoes:
+                    for campo, valor in alteracoes.items():
+                        setattr(ponto_calibracao, campo, valor)
+                    ponto_calibracao.save()
+                    return JsonResponse({"message": "Instrumento atualizado com sucesso!"})
+
+                return JsonResponse({"message": "Nenhuma alteração realizada."})
+            
+            except IntegrityError as e:
+                return JsonResponse({"message": f"Verifique a tag que está sendo criada já existe: {e}"}, status=400)
+            
+            except Exception as e:
+                return JsonResponse({"message": f"Nenhuma alteração realizada. {e}"}, status=400)
+
+    return JsonResponse({"message": "Método não permitido"}, status=405)
+
+def add_unidade_ponto_calibracao(request):
+
+    try:
+        if request.method == 'POST':
+            with transaction.atomic():
                 data = json.loads(request.body)
                 unidade_instrumento = data.get("unidade-instrumento").strip()
 
@@ -781,8 +975,98 @@ def add_unidade_ponto_calibracao(request):
                     )
 
                 return JsonResponse({"data":data})
-        
-        except json.JSONDecodeError:
-            return JsonResponse({'status': 'error', 'message': 'Erro ao processar o JSON enviado'}, status=400)
-        except Exception as e:
-            return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+        else:
+            return JsonResponse({"message": "Método não permitido"}, status=405)
+    
+    except json.JSONDecodeError:
+        return JsonResponse({'status': 'error', 'message': 'Erro ao processar o JSON enviado'}, status=400)
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+def add_laboratorio(request):
+
+    try:
+        if request.method == 'POST': 
+
+            with transaction.atomic():
+
+                    data = json.loads(request.body)
+
+                    laboratorio_instrumento = data.get("laboratorio-instrumento").strip()
+
+                    if Laboratorio.objects.filter(nome__iexact=laboratorio_instrumento).exists():
+                        return JsonResponse({'status': 'error', 'message': 'Este laboratório já existe'}, status=400)
+
+                    if laboratorio_instrumento and laboratorio_instrumento != "":
+                        laboratorio = Laboratorio.objects.create(
+                            nome=laboratorio_instrumento,
+                            status='ativo'
+                        )
+
+                    return JsonResponse({'status': 'Criado com sucesso', 'laboratorio_id':laboratorio.id})
+        else:
+            return JsonResponse({"message": "Método não permitido"}, status=405)
+
+    except json.JSONDecodeError:
+        return JsonResponse({'status': 'error', 'message': 'Erro ao processar o JSON enviado'}, status=400)
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+def edit_ultima_analise(request):
+
+    if request.method == 'POST':
+        with transaction.atomic():
+            try:
+                data = json.loads(request.body)
+                
+                id = data.get('id-instrumento-ultima-analise')
+                incerteza = data.get('incertezaUltimaAnalise')
+                tendencia = data.get('tendeciaUltimaAnalise')
+                resultado = data.get('resultadoUltimaAnalise')
+
+                # Busca o instrumento ou retorna erro se não existir
+                ponto_calibracao = get_object_or_404(PontoCalibracao, id=id)
+
+                # Verifica o status do último envio
+                ultimo_envio = Envio.objects.filter(ponto_calibracao=ponto_calibracao).order_by('-id').first()
+                if ultimo_envio and ultimo_envio.status == 'enviado':
+                    return JsonResponse({"message": "Não é possível editar o ponto de calibração enquanto o item estiver em processo de calibração."}, status=400)
+
+                try:
+                    incerteza = float(incerteza) if incerteza is not None else None
+                    tendencia = float(tendencia) if tendencia is not None else None
+                except Exception as e:
+                    return JsonResponse({"message": "Digite os campos corretamente"}, status=400)
+
+                # Busca a análise do certificado associada ao envio
+                analise_certificado = AnaliseCertificado.objects.filter(envio=ultimo_envio).first()
+                if not analise_certificado:
+                    return JsonResponse({"message": "Análise de certificado não encontrada."}, status=404)
+
+                # Dicionário para armazenar alterações
+                alteracoes = {}
+
+                # Verifica se houve mudanças nos campos e armazena as alterações
+                if analise_certificado.incerteza != incerteza:
+                    alteracoes['incerteza'] = incerteza
+                if analise_certificado.tendencia != tendencia:
+                    alteracoes['tendencia'] = tendencia
+                if analise_certificado.analise_certificado != resultado:
+                    alteracoes['analise_certificado'] = resultado
+
+                # Se houver mudanças, atualiza e salva o objeto
+                if alteracoes:
+                    for campo, valor in alteracoes.items():
+                        setattr(analise_certificado, campo, valor)
+                    analise_certificado.save()
+                    return JsonResponse({"message": "Análise de certificado atualizada com sucesso!"})
+
+                return JsonResponse({"message": "Nenhuma alteração realizada."})
+            
+            except IntegrityError as e:
+                return JsonResponse({"message": f"Verifique a tag que está sendo criada já existe: {e}"}, status=400)
+            
+            except Exception as e:
+                return JsonResponse({"message": f"Nenhuma alteração realizada. {e}"}, status=400)
+
+    return JsonResponse({"message": "Método não permitido"}, status=405)

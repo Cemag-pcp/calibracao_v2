@@ -17,9 +17,17 @@ function alterarResponsavel(tag,responsavel_id) {
     toggleRowVisibility(false);
 
     document.getElementById('form-editar-responsavel').reset();
-    document.getElementById('tag-instrumento-responsavel-editar').value = tag;
-    console.log(responsavel_id)
+    document.getElementById('select2-nome-editar-responsavel-container').textContent = "Controle da Qualidade";
     document.getElementById('nome-ultimo-responsavel').value = responsavel_id;
+    const selectResponsaveis = document.getElementById('nome-editar-responsavel')
+
+    for (let option of selectResponsaveis.options) {
+        if (option.value == responsavel_id) {
+            option.remove()   
+        }
+    }
+
+    document.getElementById('tag-instrumento-responsavel-editar').value = tag;
 
     const modal = new bootstrap.Modal(document.getElementById('modal-alterar-responsavel'));
     modal.show();
@@ -48,6 +56,8 @@ function enviarCalibracao(tag,pontoCalibracao,nomeResponsavel) {
     document.getElementById('col-instrumento-substituira-envio').style.display = 'none';
     document.getElementById('tag-instrumento-envio').value = tag;
     document.getElementById('pk-ponto-calibracao-enviar').value = pontoCalibracao;
+    document.getElementById('select2-responsavelEnvio-container').textContent = '------------';
+
     document.getElementById('formEnviar').reset();
     let novoInstrumento = document.getElementById('instrumento-substituira-envio');
     let campoParaSubstituirInstrumento = document.getElementById('campo-novo-instrumento');
@@ -179,15 +189,21 @@ function analisarCalibracao(idEnvio,tag,pontoCalibracao) {
     document.getElementById('id-instrumento-analise').value = idEnvio;
     document.getElementById('formAnalise').reset();
 
+    document.getElementById('select2-responsavelAnalise-container').textContent = "-------";
+
+
     buscarInfoInstrumento(idEnvio,pontoCalibracao)
 
 }
 
-function ultimaAnalise(idEnvio,tag,pontoCalibracao) {
+function ultimaAnalise(idEnvio,tag,pontoCalibracao, pdf) {
 
     document.getElementById('modal-title-ultima-analise').textContent = `Analisar: ${tag}`;
     document.getElementById('id-instrumento-ultima-analise').value = idEnvio;
+    document.getElementById('certificadoAtualUltimaAnalise').href = pdf;
     document.getElementById('formUltimaAnalise').reset();
+
+    console.log(idEnvio)
 
     buscarUltimaAnaliseInstrumento(idEnvio,pontoCalibracao)
 
@@ -205,6 +221,12 @@ document.addEventListener('DOMContentLoaded', () => {
     formEnviar.addEventListener('submit', async (event) => {
         event.preventDefault(); // Impede o envio padrão do formulário
 
+        const button = document.getElementById('submit-enviar-instrumento');
+        const spinner = document.getElementById('spinner-enviar-instrumento');
+
+        button.disabled = true;
+        spinner.style.display = 'block';
+        
         // Cria o objeto com os dados do formulário
         const formData = new FormData(formEnviar);
 
@@ -237,7 +259,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     text: data.message,
                 });
     
-                $('#instrumentos-table').DataTable().ajax.reload(); // Reatualiza a tabela
+                $('#instrumentos-table').DataTable().ajax.reload(null, false); // Reatualiza a tabela
 
                 const modal = bootstrap.Modal.getInstance(document.getElementById('modal-enviar'));
                 modal.hide();
@@ -261,12 +283,21 @@ document.addEventListener('DOMContentLoaded', () => {
                 title: 'Erro de Conexão',
                 text: 'Erro ao enviar o formulário. Verifique sua conexão e tente novamente.',
             });
+        } finally {
+            button.disabled = false;
+            spinner.style.display = 'none';
         }
     });
 
     // Captura o evento de envio do formulário
     formRecebimento.addEventListener('submit', async (event) => {
         event.preventDefault(); // Impede o envio padrão do formulário
+
+        const button = document.getElementById('submit-receber-instrumento');
+        const spinner = document.getElementById('spinner-receber-instrumento');
+
+        button.disabled = true;
+        spinner.style.display = 'block';
 
         // Cria o objeto com os dados do formulário
         const formData = new FormData(formRecebimento);
@@ -276,8 +307,6 @@ document.addEventListener('DOMContentLoaded', () => {
         formData.forEach((value, key) => {
             jsonData[key] = value;
         });
-
-        console.log(jsonData)
 
         try {
             // Envia a requisição para o backend
@@ -300,7 +329,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     text: data.message,
                 });
 
-                $('#instrumentos-table').DataTable().ajax.reload(); // Reatualiza a tabela
+                $('#instrumentos-table').DataTable().ajax.reload(null, false); // Reatualiza a tabela
 
                 const modal = bootstrap.Modal.getInstance(document.getElementById('modal-recebimento'));
                 modal.hide();
@@ -322,12 +351,21 @@ document.addEventListener('DOMContentLoaded', () => {
                 title: 'Erro de Conexão',
                 text: errorData.message || 'Algo deu errado, tente novamente.',
             });
+        } finally {
+            button.disabled = false;
+            spinner.style.display = 'none';
         }
     });
 
     // Captura o evento de envio do formulário
     formAnalise.addEventListener('submit', async (event) => {
         event.preventDefault(); // Impede o envio padrão do formulário
+
+        const button = document.getElementById('submit-analisar-instrumento');
+        const spinner = document.getElementById('spinner-analisar-instrumento');
+
+        button.disabled = true;
+        spinner.style.display = 'block';
 
         // Cria o objeto com os dados do formulário
         const formData = new FormData(formAnalise);
@@ -359,7 +397,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     text: data.message || 'Operação concluída com sucesso!',
                 });
 
-                $('#instrumentos-table').DataTable().ajax.reload(); // Reatualiza a tabela
+                $('#instrumentos-table').DataTable().ajax.reload(null, false); // Reatualiza a tabela
 
                 // Fecha o modal
                 const modal = bootstrap.Modal.getInstance(document.getElementById('modal-analise'));
@@ -383,6 +421,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 title: 'Erro de Conexão',
                 text: 'Erro ao enviar o formulário. Verifique sua conexão e tente novamente.',
             });
+        } finally {
+            button.disabled = false;
+            spinner.style.display = 'none';    
         }
     });
 
@@ -390,6 +431,12 @@ document.addEventListener('DOMContentLoaded', () => {
         event.preventDefault(); // Impede o envio padrão do formulário
          // Cria o objeto com os dados do formulário
          const formData = new FormData(formStatusInstrumento);
+
+         const button = document.getElementById('submit-substituicao-instrumento');
+         const spinner = document.getElementById('spinner-substituicao-instrumento');
+ 
+         button.disabled = true;
+         spinner.style.display = 'block';
 
          // Converte os dados do formulário para JSON
          const jsonData = {};
@@ -422,7 +469,7 @@ document.addEventListener('DOMContentLoaded', () => {
                      text: data.message || 'Operação concluída com sucesso!',
                  });
  
-                 $('#instrumentos-table').DataTable().ajax.reload(); // Reatualiza a tabela
+                 $('#instrumentos-table').DataTable().ajax.reload(null, false); // Reatualiza a tabela
  
                  // Fecha o modal
                  const modal = bootstrap.Modal.getInstance(document.getElementById('statusInstrumentoModal'));
@@ -446,6 +493,9 @@ document.addEventListener('DOMContentLoaded', () => {
                  title: 'Erro de Conexão',
                  text: 'Erro ao enviar o formulário. Verifique sua conexão e tente novamente.',
              });
+         } finally {
+            button.disabled = false;
+            spinner.style.display = 'none';
          }
     })
 });
@@ -496,7 +546,6 @@ function buscarUltimaAnaliseInstrumento(idEnvio, pontoCalibracao) {
             const info = data.info[0];
             const analise = info.analise_certificado;
 
-            console.log(analise.tendencia)
 
             // Preenchendo os campos do modal
             document.getElementById('id-instrumento-ultima-analise').value = pontoCalibracao; // Ou outro identificador relevante
@@ -525,6 +574,10 @@ function abrirModalEscolherResponsavel(tag) {
     document.getElementById('modal-title-responsavel').textContent = `Escolher responsável para: ${tag}`;
     document.getElementById('tag-instrumento-responsavel').value = tag;
     document.getElementById('formResponsavel').reset();
+
+    document.getElementById('nome-responsavel').value = "";
+    document.getElementById('select2-nome-responsavel-container').title = "-------";
+    document.getElementById('select2-nome-responsavel-container').textContent = "-------";
 
     document.getElementById('formResponsavel').style.visibility = 'visible';
     document.getElementById('formResponsavel').style.opacity = '1';

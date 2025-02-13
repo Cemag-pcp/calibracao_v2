@@ -43,7 +43,7 @@ function processarHistorico(data) {
 }
 
 function processarDataTableHistorico(data) {
-    const historicoTableBody = document.querySelector("#instrumentos-table tbody");
+    const historicoTableBody = document.querySelector("#historico-table tbody");
     historicoTableBody.innerHTML = "";
 
     if (data.historico.length > 0) {

@@ -54,13 +54,19 @@ document.addEventListener("DOMContentLoaded", function () {
                 icon: "success",
                 title: `Ponto de controle foi adicionado com sucesso!`
               });
+              setTimeout(() => {
+                location.reload()
+            }, 2000)
         })
         .catch(error => {
-            console.error(error);
-        })
-        .finally(() => {
+            console.error("Erro: " + error.message);
+            Swal.fire({
+                icon: "error",
+                title: error.message
+              });
             setTimeout(() => {
-                location.reload()
+                button.disabled = false;  // Habilita o botão
+                spinner.style.display = "none";  // Esconde o spinner
             }, 2000)
         })
     })

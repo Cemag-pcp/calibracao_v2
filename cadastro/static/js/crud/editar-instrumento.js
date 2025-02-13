@@ -14,6 +14,11 @@ document.addEventListener("DOMContentLoaded", function() {
             };
 
             $("#modalEditar").modal("show");
+            const typeSelect = document.getElementById("modal-edit-tipo");
+            const optionLoading = document.createElement("option");
+            optionLoading.value = "Carregando...";
+            optionLoading.textContent = "Carregando...";
+            typeSelect.appendChild(optionLoading)
 
             document.getElementById("modalEditarLabel").textContent = `Instrumento - ${instrumento.tag}`
             // Preenchendo o modal
@@ -23,9 +28,8 @@ document.addEventListener("DOMContentLoaded", function() {
             document.getElementById("modal-edit-tempo").value = instrumento.tempo;
             document.getElementById("modal-edit-ultima").value = instrumento.ultima;
             document.getElementById("modal-edit-proxima").value = instrumento.proxima;
-            document.getElementById("modal-edit-tipo").value = instrumento.tipo;
+            typeSelect.value = "Carregando...";
 
-            const typeSelect = document.getElementById("modal-edit-tipo");
             const statusSelect = document.getElementById("modal-edit-status");
 
             fetch("/add-instrumento/", {
@@ -60,8 +64,81 @@ document.addEventListener("DOMContentLoaded", function() {
             }).catch(error => {
                 console.error("Erro ", error)
             })
-
-            // Abrindo o modal
         });
+    });
+});
+
+
+
+document.addEventListener("DOMContentLoaded", function() {
+    const formEdit = document.getElementById("form-edit");
+    const button = document.getElementById("submit-editar-instrumento");
+    const spinner = document.getElementById("spinner-border-editar-instrumento");
+
+    formEdit.addEventListener("submit", function(event) {
+        event.preventDefault()
+
+        button.disabled = true;
+        spinner.style.display = 'block';
+
+        const jsonData = {};
+
+        const formData = new FormData(formEdit);
+
+        formData.forEach((value, key) => {
+            jsonData[key] = value;
+        });
+
+        const cookieValue = document.cookie.split('; ').find((row) => row.startsWith('csrftoken='))?.split('=')[1];
+        if (!cookieValue) {
+            console.error("CSRF Token não encontrado!");
+            button.disabled = false;
+            spinner.style.display = 'none';
+            return; // Interrompe a requisição se o token não for encontrado
+        }
+
+        fetch("/edit-instrumento/", {
+            method:"POST",
+            headers: {
+                "Content-Type": "application/json",
+                "X-CSRFToken": cookieValue,
+            },
+            body: JSON.stringify(jsonData),
+        }).then(response => {
+            if (!response.ok) {
+                return response.json().then(err => {
+                    throw new Error(err.message || "Erro desconhecido na requisição");
+                })
+            }
+            return response.json()
+
+        }).then(data => {
+            const Toast = Swal.mixin({
+                toast: true,
+                position: "bottom-end",
+                showConfirmButton: false,
+                timer: 3000,
+                timerProgressBar: true,
+                didOpen: (toast) => {
+                  toast.onmouseenter = Swal.stopTimer;
+                  toast.onmouseleave = Swal.resumeTimer;
+                }
+              });
+              Toast.fire({
+                icon: "success",
+                title: `Ponto de Calibração foi editado com sucesso!`
+              });
+              setTimeout(() => {
+                location.reload();
+            }, 1000)
+        }).catch(error => {
+            console.error(error);
+            Swal.fire({
+                icon: "error",
+                title: error.message
+            });
+            button.disabled = false;
+            spinner.style.display = 'none';
+        })
     });
 });

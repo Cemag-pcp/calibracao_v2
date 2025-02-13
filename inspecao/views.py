@@ -79,7 +79,8 @@ def enviar_view(request):
                         funcionario=funcionario,
                         instrumento=instrumento_object,
                         motivo='devolução',
-                        data_entrega=data_envio
+                        data_entrega=data_envio,
+                        observacoes='calibração'
                     )
 
                     descricao = f"Instrumento: {instrumento_object.tag} - Devolvido pelo funcionário: {funcionario} - na data {data_envio}"
@@ -119,8 +120,10 @@ def enviar_view(request):
     return JsonResponse({'status': 'error', 'message': 'Método não permitido'}, status=405)
 
 def receber_view(request):
-    with transaction.atomic():
-        if request.method == 'POST':
+        
+    if request.method == 'POST':
+
+        with transaction.atomic():
             try:
                 # Parse do corpo da requisição
                 data = json.loads(request.body)
@@ -202,9 +205,6 @@ def analisar_view(request):
                     data_analise = datetime.strptime(data_analise_str, '%Y-%m-%d').date()
                 except ValueError:
                     return JsonResponse({'status': 'error', 'message': 'Formato de data inválido. Use YYYY-MM-DD.'}, status=400)
-
-                print(data.get('incertezaAnalise'))
-                print(data.get('tendenciaAnalise'))
 
                 incerteza_analise = float(data.get('incertezaAnalise'))  # Valor padrão como 0
                 tendencia_analise = float(data.get('tendenciaAnalise'))  # Valor padrão como 0

@@ -37,7 +37,7 @@ document.addEventListener('DOMContentLoaded', function () {
     // Capturar o envio do primeiro formulário
     formResponsavel.addEventListener('submit', async (event) => {
         event.preventDefault();
-        await enviarFormularioComAssinatura(formResponsavel, signaturePad, '/escolher-responsavel/');
+        await enviarFormularioComAssinatura(formResponsavel, signaturePad, '/escolher-responsavel/', 'submit-atribuir-instrumento-responsavel', 'spinner-atribuir-instrumento-responsavel');
     });
 
     // Capturar o envio do segundo formulário
@@ -48,20 +48,28 @@ document.addEventListener('DOMContentLoaded', function () {
     
         if (!nomeResponsavel) {
             // Se o campo 'nome-editar-responsavel' estiver vazio, ignore a verificação da assinatura
-            await enviarFormularioSemAssinatura(formEditarResponsavel, '/editar-responsavel/');
+            await enviarFormularioSemAssinatura(formEditarResponsavel, '/editar-responsavel/', 'submit-alterar-instrumento-responsavel', 'spinner-alterar-instrumento-responsavel');
         } else {
             // Se o campo 'nome-editar-responsavel' não estiver vazio, verificar a assinatura
-            await enviarFormularioComAssinatura(formEditarResponsavel, signaturePadEdicao, '/editar-responsavel/');
+            await enviarFormularioComAssinatura(formEditarResponsavel, signaturePadEdicao, '/editar-responsavel/', 'submit-alterar-instrumento-responsavel', 'spinner-alterar-instrumento-responsavel');
         }
     });
 
     formDesignarInstrumentos.addEventListener('submit', async (event) => {
         event.preventDefault();
-        await enviarFormularioComAssinatura(formDesignarInstrumentos, signatureDesignarVariosInstrumentos, '/designar-mais-instrumentos/');
+        await enviarFormularioComAssinatura(formDesignarInstrumentos, signatureDesignarVariosInstrumentos, '/designar-mais-instrumentos/', 'submit-designar-mais-instrumento-responsavel', 'spinner-designar-mais-instrumento-responsavel');
     });
 
     // Função para enviar o formulário com a assinatura
-    async function enviarFormularioComAssinatura(form, signaturePad, url) {
+    async function enviarFormularioComAssinatura(form, signaturePad, url, idButton, idSpinner) {
+        
+        const button = document.getElementById(idButton);
+        const spinner = document.getElementById(idSpinner);
+
+        console.log(button)
+        button.disabled = true;
+        spinner.style.display = 'block';
+
         const formData = new FormData(form);
         const jsonData = {};
         formData.forEach((value, key) => {
@@ -70,6 +78,8 @@ document.addEventListener('DOMContentLoaded', function () {
 
         if (signaturePad.isEmpty()) {
             alert("Por favor, forneça a assinatura.");
+            button.disabled = false;
+            spinner.style.display = 'none';
             return;
         }
 
@@ -83,6 +93,8 @@ document.addEventListener('DOMContentLoaded', function () {
 
             if (instrumentosSelecionados.length === 0) {
                 alert("Por favor, selecione pelo menos um instrumento.");
+                button.disabled = false;
+                spinner.style.display = 'none';
                 return;
             }
 
@@ -109,7 +121,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     title: 'Sucesso!',
                     text: data.message || 'Operação concluída com sucesso!',
                 });
-                $('#instrumentos-table').DataTable().ajax.reload();
+                $('#instrumentos-table').DataTable().ajax.reload(null, false);
                 const modal = bootstrap.Modal.getInstance(document.getElementById(form.id).closest('.modal'));
                 modal.hide();
             } else {
@@ -128,10 +140,21 @@ document.addEventListener('DOMContentLoaded', function () {
                 title: 'Erro de Conexão',
                 text: 'Erro ao enviar o formulário. Verifique sua conexão e tente novamente.',
             });
+        } finally {
+            // Garante que o botão e o spinner sejam redefinidos, independentemente do resultado
+            button.disabled = false;
+            spinner.style.display = 'none'; // Corrigido para 'style.display'
         }
     }
 
-    async function enviarFormularioSemAssinatura(form, url) {
+    async function enviarFormularioSemAssinatura(form, url, idButton, spinnerButton) {
+
+        const button = document.getElementById(idButton);
+        const spinner = document.getElementById(spinnerButton);
+
+        button.disabled = true;
+        spinner.style.display = 'block';
+
         const formData = new FormData(form);
         const jsonData = {};
         formData.forEach((value, key) => {
@@ -155,7 +178,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     title: 'Sucesso!',
                     text: data.message || 'Operação concluída com sucesso!',
                 });
-                $('#instrumentos-table').DataTable().ajax.reload();
+                $('#instrumentos-table').DataTable().ajax.reload(null, false);
                 const modal = bootstrap.Modal.getInstance(document.getElementById(form.id).closest('.modal'));
                 modal.hide();
             } else {
@@ -174,6 +197,10 @@ document.addEventListener('DOMContentLoaded', function () {
                 title: 'Erro de Conexão',
                 text: 'Erro ao enviar o formulário. Verifique sua conexão e tente novamente.',
             });
+        } finally {
+            // Garante que o botão e o spinner sejam redefinidos, independentemente do resultado
+            button.disabled = false;
+            spinner.style.display = 'none'; // Corrigido para 'style.display'
         }
     }
 

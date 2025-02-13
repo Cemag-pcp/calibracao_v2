@@ -97,6 +97,9 @@ document.addEventListener("DOMContentLoaded", () => {
                 icon: "success",
                 title: `Instrumento foi adicionado com sucesso!`
               });
+            setTimeout(() => {
+                location.reload();
+            }, 1000)
         })
         .catch(error => {
             console.error("Erro: " + error.message);
@@ -104,11 +107,10 @@ document.addEventListener("DOMContentLoaded", () => {
                 icon: "error",
                 title: error.message
               });
-        })
-        .finally(() => {
             setTimeout(() => {
-                location.reload();
-            }, 1000)
+                button.disabled = false;  // Habilita o botão
+                spinner.style.display = "none";  // Esconde o spinner
+            }, 3000)
         })
     })
 })
