@@ -2,8 +2,8 @@ from .base import *
 
 import os
 
-# Configurações específicas de produção
 DEBUG = False
+
 ALLOWED_HOSTS = ['*']
 
 CSRF_TRUSTED_ORIGINS = []
@@ -32,10 +32,12 @@ DATABASES = {
         'HOST': env('DB_HOST'),
         'PORT': env('DB_PORT'),
         'OPTIONS': {
-            'options': '-c search_path=sistema_calibracao',
+            'options': f'-c search_path={env('SCHEMA_DB_NAME')}',
         },
     }
 }
+
+LOGIN_URL = "/home"
 
 # Configurações para servir arquivos estáticos
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
