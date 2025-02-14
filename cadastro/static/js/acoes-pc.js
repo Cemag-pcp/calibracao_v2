@@ -1,8 +1,16 @@
 function abrirQrCodeModal(tag) {
+    Swal.fire({
+        title: 'Carregando...',
+        text: 'Buscando informações das peças...',
+        allowOutsideClick: false,
+        didOpen: () => {
+            Swal.showLoading();
+        }
+    });
     fetch(`/instrumento/qrcode/${tag}/`)
         .then(response => response.json())
         .then(data => {
-
+            Swal.close();
             document.getElementById('modal-title-qrcode').textContent = `QR Code do Instrumento: ${tag}`;
             document.getElementById('modal-body-qrcode').innerHTML = `
                 <img src="${data.qrcode_url}" alt="QR Code de ${tag}" class="img-fluid">
@@ -547,9 +555,20 @@ function buscarInfoInstrumento(idEnvio, pontoCalibracao) {
 }
 
 function buscarUltimaAnaliseInstrumento(idEnvio, pontoCalibracao) {
+    Swal.fire({
+        title: 'Carregando...',
+        text: 'Buscando informações das peças...',
+        allowOutsideClick: false,
+        didOpen: () => {
+            Swal.showLoading();
+        }
+    });
+
     fetch(`/instrumento/info/ultima_analise/${pontoCalibracao}/${idEnvio}/`)
         .then(response => response.json())
         .then(data => {
+
+            Swal.close();
             const info = data.info[0];
             const analise = info.analise_certificado;
 
