@@ -13,7 +13,7 @@ DATABASES = {
         'HOST': env('DB_HOST'),
         'PORT': env('DB_PORT'),
         'OPTIONS': {
-            'options': '-c search_path=sistema_calibracao',
+            'options': '-c search_path=sistema_calibracao_teste',
         },
     }
 }
