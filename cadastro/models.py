@@ -6,7 +6,16 @@ from django.contrib.auth.models import User
 import qrcode
 from io import BytesIO
 from PIL import Image
+import environ
+import os
+from pathlib import Path
+
 from datetime import timedelta, date
+
+BASE_DIR = Path(__file__).resolve().parent.parent.parent
+
+env = environ.Env()
+environ.Env.read_env(os.path.join(BASE_DIR, '.env'))
 
 class Setor(models.Model):
 
@@ -140,7 +149,7 @@ class InfoInstrumento(models.Model):
             super().save(*args, **kwargs)
 
     def get_full_url(self):
-        return 'http://127.0.0.1:8000'
+        return f'http://{env("URL")}'
 
     def __str__(self):
         return f'{self.tag} - {self.status_instrumento}'
