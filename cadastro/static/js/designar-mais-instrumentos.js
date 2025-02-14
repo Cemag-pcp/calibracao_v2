@@ -20,6 +20,15 @@ function modalDesignarMaisInstrumento() {
         }
     }
 
+    Swal.fire({
+        title: 'Carregando...',
+        text: 'Buscando informações das peças...',
+        allowOutsideClick: false,
+        didOpen: () => {
+            Swal.showLoading();
+        }
+    });
+
     fetch('/designar-mais-instrumentos/', { // Substitua pela URL correta
         method: 'GET', // Ou GET, dependendo do seu caso
         headers: {
@@ -29,6 +38,7 @@ function modalDesignarMaisInstrumento() {
     .then(response => response.json()) // Convertendo resposta para JSON
     .then(data => {
         if (data.sucesso) { 
+            Swal.close();
             var modal = new bootstrap.Modal(document.getElementById('modalDesignarMaisDeUmInstrumento'));
             modal.show(); // Exibe o modal
             console.log(data.instrumentos);
