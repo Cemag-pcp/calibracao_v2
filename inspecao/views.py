@@ -3,7 +3,7 @@ from django.http import JsonResponse
 from django.db import transaction
 
 from cadastro.models import InfoInstrumento, Operadores, DesignarInstrumento, Funcionario
-from inspecao.models import Laboratorio, Envio, AnaliseCertificado, PontoCalibracao
+from inspecao.models import Laboratorio, Envio, AnaliseCertificado, PontoCalibracao, Versao
 from ficha.models import AssinaturaInstrumento, StatusInstrumento
 from cadastro.utils import *
 
@@ -302,4 +302,10 @@ def info_instrumento_ultima_analise(request,pk_ponto,id_envio):
 
     return JsonResponse({'info':info})
 
-        
+def versoes(request):
+
+    versao = Versao.objects.all()
+
+    return render(request, "versoes.html", {
+        "versoes": versao
+    })

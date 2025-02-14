@@ -9,6 +9,6 @@ urlpatterns = [
 
     path('instrumento/info/<int:pk_ponto>/<int:id_envio>/', views.info_instrumento, name='info_instrumento'),
     path('instrumento/info/ultima_analise/<int:pk_ponto>/<int:id_envio>/', views.info_instrumento_ultima_analise, name='info_instrumento'),
-
+    path('home/versoes', views.versoes, name='versoes')
 
 ]

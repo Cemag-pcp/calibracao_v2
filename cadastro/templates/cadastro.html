@@ -1,10 +1,6 @@
 {% extends "base.html" %}
 {% load static %}
 
-<style>
-
-</style>
-
 {% block links %}
     <link href="{% static 'css/selects.css' %}" rel="stylesheet">
 {% endblock %}
@@ -12,27 +8,32 @@
 {% block content %}
 
 <div class="d-flex justify-content-between mb-3">
-    <h2>Plano Mestre</h2>
+    <h2>Cadastro de Itens</h2>
     <button type="button" id="buttonAddInstrumento" class="btn btn-primary btn-sm"><i class="fa-solid fa-plus"></i> Add Instrumento</button>
 </div>
+
+<div class="d-flex justify-content-end">
+    <input type="text" id="filtroTag" placeholder="Filtrar por Tag..." class="form-control mb-3" style="width: 200px;"> 
+</div>
+
 
 <table id="example" class="display table table-striped table-bordered">
     <thead>
         <tr>
-            <th></th>
+            <th style="width: 50px;"></th>
             <th>Tag</th>
             <th>Instrumento</th>
             <th>Marca</th>
             <th>Status</th>
-            <th style="width: 150px;">Tempo de calibração (em dias)</th>
-            <th style="width: 150px;">Possui ponto de calibração?</th>
+            <th>Tempo de calibração (em dias)</th>
+            <th>Possui ponto de calibração?</th>
             <th>Editar</th>
         </tr>
     </thead>
     <tbody>
         {% for item in instrumentos_com_pontos_calibracao %}
             <tr class="main-row">
-                <td><button style="font-size: 10px;" class="btn btn-primary toggle-accordion"><i class="fa-solid fa-chevron-down"></i></button></td>
+                <td style="width: 50px;"><button style="font-size: 10px;" class="btn btn-primary toggle-accordion"><i class="fa-solid fa-chevron-down"></i></button></td>
                 <td>{{ item.instrumento.tag }}</td>
                 <td>{{ item.instrumento.tipo_instrumento }}</td>
                 <td>{{ item.instrumento.marca }}</td>
@@ -357,7 +358,17 @@
             });
         });
     });
-    
+
+    $(document).ready(function() {
+        // Função para filtrar a tabela
+        $("#filtroTag").on("keyup", function() {
+            var value = $(this).val().toLowerCase(); // Pega o valor do input e converte para minúsculas
+            $("#example tbody tr.main-row").filter(function() {
+                $(this).toggle($(this).find("td:eq(1)").text().toLowerCase().indexOf(value) > -1);
+            });
+        });
+    });
+
 </script>
 
 {% endblock %}

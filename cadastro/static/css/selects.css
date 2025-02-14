@@ -54,22 +54,3 @@
     background-color: #0d6efd;
     color: white;
 }
-
-/* Define a altura fixa para o tbody e permite que ele role */
-#example tbody {
-    display: block;
-    height: 100px; /* Ajuste a altura conforme necessário */
-    overflow-y: auto;
-}
-
-/* Garante que o thead e tbody tenham a mesma largura */
-#example thead, #example tbody tr {
-    display: table;
-    width: 100%;
-    table-layout: fixed;
-}
-
-/* Ajusta o layout da tabela para que o thead e tbody fiquem alinhados */
-#example {
-    width: 100%;
-}
