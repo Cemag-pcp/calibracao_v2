@@ -9,17 +9,20 @@ document.addEventListener("DOMContentLoaded", () => {
         const laboratorioInstrumento = document.getElementById("input-laboratorio-instrumento").value;
         const selectUnidade = document.getElementById("laboratorio");
 
-        const cookieValue = document.cookie.split('; ').find((row) => row.startsWith('csrftoken='))?.split('=')[1];
-        if (!cookieValue) {
+        const csrfToken = document.querySelector('input[name="csrfmiddlewaretoken"]').value;
+
+        if (!csrfToken) {
             console.error("CSRF Token não encontrado!");
-            return; // Interrompe a requisição se o token não for encontrado
+            button.disabled = false;
+            spinner.style.display = "none";
+            return;
         }
 
         fetch("/add-laboratorio/", {
             method: "POST",
             headers: {
                 "Content-type": "application/json",
-                'X-CSRFToken': cookieValue
+                'X-CSRFToken': csrfToken
             },
             body: JSON.stringify({ "laboratorio-instrumento": laboratorioInstrumento }),
         })
