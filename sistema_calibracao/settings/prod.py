@@ -4,9 +4,9 @@ import os
 
 DEBUG = False
 
-ALLOWED_HOSTS = ['*']
+ALLOWED_HOSTS = ['calibracao-v2-teste.onrender.com','calibracao-v2.onrender.com']
 
-CSRF_TRUSTED_ORIGINS = []
+CSRF_TRUSTED_ORIGINS = ['https://calibracao-v2-teste.onrender.com','https://calibracao-v2.onrender.com']
 
 LOGGING = {
     'version': 1,
@@ -37,7 +37,7 @@ DATABASES = {
     }
 }
 
-LOGIN_URL = "/home"
+
 
 # Configurações para servir arquivos estáticos
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')

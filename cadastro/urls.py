@@ -4,6 +4,7 @@ from . import views
 urlpatterns = [
     path('instrumento/<int:pk>/', views.instrumento_detail, name='instrumento_detail'),
 
+    path('', views.home, name='homes'),
     path('home/', views.home, name='home'),
     path('instrumentos-data/', views.instrumentos_data, name='instrumentos_data'),
 
