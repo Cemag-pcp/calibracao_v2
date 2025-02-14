@@ -502,10 +502,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // Função para obter o CSRF Token do cookie
 function getCsrfToken() {
+    const csrfInput = document.querySelector('input[name="csrfmiddlewaretoken"]');
+    if (csrfInput) {
+        return csrfInput.value;
+    }
+
+    // Se não encontrar o input, tenta pegar dos cookies
     const cookieValue = document.cookie
         .split('; ')
         .find((row) => row.startsWith('csrftoken='))
         ?.split('=')[1];
+
     return cookieValue || '';
 }
 

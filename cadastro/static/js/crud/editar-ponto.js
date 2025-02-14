@@ -37,19 +37,20 @@ document.addEventListener("DOMContentLoaded", function() {
             jsonData[key] = value;
         });
 
-        const cookieValue = document.cookie.split('; ').find((row) => row.startsWith('csrftoken='))?.split('=')[1];
-        if (!cookieValue) {
+        const csrfToken = document.querySelector('input[name="csrfmiddlewaretoken"]').value;
+
+        if (!csrfToken) {
             console.error("CSRF Token não encontrado!");
             button.disabled = false;
-            spinner.style.display = 'none';
-            return; // Interrompe a requisição se o token não for encontrado
+            spinner.style.display = "none";
+            return;
         }
 
         fetch("/editar-ponto-calibracao/", {
             method:"POST",
             headers: {
                 "Content-Type": "application/json",
-                "X-CSRFToken": cookieValue,
+                "X-CSRFToken": csrfToken,
             },
             body: JSON.stringify(jsonData),
         }).then(response => {

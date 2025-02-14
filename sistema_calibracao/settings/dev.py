@@ -4,6 +4,7 @@ from .base import *
 DEBUG = True
 ALLOWED_HOSTS = ["127.0.0.1", "localhost"]
 
+CSRF_TRUSTED_ORIGINS = []
 
 DATABASES = {
     'default': {
@@ -18,8 +19,6 @@ DATABASES = {
         },
     }
 }
-
-LOGIN_URL = "/home"
 
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 # Configurações adicionais para desenvolvimento (opcional)
