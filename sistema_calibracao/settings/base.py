@@ -85,6 +85,8 @@ TIME_ZONE = 'America/Sao_Paulo'  # Ajuste para o horário de Brasília
 USE_I18N = True
 USE_TZ = False
 
+
+LOGIN_REDIRECT_URL = '/home/'
 STATIC_URL = 'static/'
 STATICFILES_DIRS = [
     os.path.join(BASE_DIR, 'static/'),
