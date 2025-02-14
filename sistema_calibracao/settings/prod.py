@@ -32,7 +32,7 @@ DATABASES = {
         'HOST': env('DB_HOST'),
         'PORT': env('DB_PORT'),
         'OPTIONS': {
-            'options': f'-c search_path={env('SCHEMA_DB_NAME')}',
+            'options': f'-c search_path={env("SCHEMA_DB_NAME")}',
         },
     }
 }
