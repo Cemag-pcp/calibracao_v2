@@ -110,7 +110,11 @@ def enviar_view(request):
                         status='enviado'
                     )
 
-                    descricao = f'Instrumento enviado para calibração no ponto {ponto.descricao} no dia {data_envio}.\nLaboratório responsável: {laboratorio_object}'
+                    if laboratorio_object.nome == 'N/A':
+                        descricao = f'Instrumento enviado para calibração no ponto {ponto.descricao} no dia {data_envio}.\nLaboratório responsável: Instrumento novo com certificado'
+                    else:    
+                        descricao = f'Instrumento enviado para calibração no ponto {ponto.descricao} no dia {data_envio}.\nLaboratório responsável: {laboratorio_object}'
+
                     registrar_envio_calibracao(instrumento_object, ponto, descricao)
 
                 return JsonResponse({'status': 'success', 'message': 'Instrumento enviado para calibração em todos os pontos!'}, status=200)
@@ -171,7 +175,11 @@ def receber_view(request):
                     envio_object.calcular_proxima_calibracao()
 
                     # Registra o recebimento da calibração
-                    descricao = f'Instrumento no ponto {envio_object.ponto_calibracao}, recebido do laboratório {envio_object.laboratorio} dia {data_recebimento}.'
+                    if envio_object.laboratorio.nome == 'N/A':
+                        descricao = f'Instrumento no ponto {envio_object.ponto_calibracao}. Instrumento novo com certificado recebido no dia {data_recebimento}. <a href="{link_certificado}" target="_blank">Link do Certificado</a>'
+                    else:
+                        descricao = f'Instrumento no ponto {envio_object.ponto_calibracao}, recebido do laboratório {envio_object.laboratorio} dia {data_recebimento}. <a href="{link_certificado}" target="_blank">Link do Certificado</a>'
+
                     registrar_recebimento_calibracao(envio_object.instrumento, envio_object.ponto_calibracao, descricao)
 
                 return JsonResponse({'status': 'success', 'message': 'Instrumentos recebidos com sucesso'}, status=200)

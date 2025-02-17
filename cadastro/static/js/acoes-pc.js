@@ -525,9 +525,19 @@ function getCsrfToken() {
 }
 
 function buscarInfoInstrumento(idEnvio, pontoCalibracao) {
+    Swal.fire({
+        title: 'Carregando...',
+        text: 'Buscando informações das peças...',
+        allowOutsideClick: false,
+        didOpen: () => {
+            Swal.showLoading();
+        }
+    });
+
     fetch(`/instrumento/info/${pontoCalibracao}/${idEnvio}/`)
         .then(response => response.json())
         .then(data => {
+            Swal.close()
             // Atualiza as informações do instrumento
             document.getElementById('faixaNominal').textContent = data.info[0].faixa_nominal || 'Não disponível';
             document.getElementById('toleranciaAdmissivel').textContent = data.info[0].tol_admissivel || 'Não disponível';
