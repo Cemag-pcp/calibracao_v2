@@ -1,8 +1,16 @@
 function abrirQrCodeModal(tag) {
+    Swal.fire({
+        title: 'Carregando...',
+        text: 'Buscando informações das peças...',
+        allowOutsideClick: false,
+        didOpen: () => {
+            Swal.showLoading();
+        }
+    });
     fetch(`/instrumento/qrcode/${tag}/`)
         .then(response => response.json())
         .then(data => {
-
+            Swal.close();
             document.getElementById('modal-title-qrcode').textContent = `QR Code do Instrumento: ${tag}`;
             document.getElementById('modal-body-qrcode').innerHTML = `
                 <img src="${data.qrcode_url}" alt="QR Code de ${tag}" class="img-fluid">
@@ -502,17 +510,34 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // Função para obter o CSRF Token do cookie
 function getCsrfToken() {
+    const csrfInput = document.querySelector('input[name="csrfmiddlewaretoken"]');
+    if (csrfInput) {
+        return csrfInput.value;
+    }
+
+    // Se não encontrar o input, tenta pegar dos cookies
     const cookieValue = document.cookie
         .split('; ')
         .find((row) => row.startsWith('csrftoken='))
         ?.split('=')[1];
+
     return cookieValue || '';
 }
 
 function buscarInfoInstrumento(idEnvio, pontoCalibracao) {
+    Swal.fire({
+        title: 'Carregando...',
+        text: 'Buscando informações das peças...',
+        allowOutsideClick: false,
+        didOpen: () => {
+            Swal.showLoading();
+        }
+    });
+
     fetch(`/instrumento/info/${pontoCalibracao}/${idEnvio}/`)
         .then(response => response.json())
         .then(data => {
+            Swal.close()
             // Atualiza as informações do instrumento
             document.getElementById('faixaNominal').textContent = data.info[0].faixa_nominal || 'Não disponível';
             document.getElementById('toleranciaAdmissivel').textContent = data.info[0].tol_admissivel || 'Não disponível';
@@ -540,9 +565,20 @@ function buscarInfoInstrumento(idEnvio, pontoCalibracao) {
 }
 
 function buscarUltimaAnaliseInstrumento(idEnvio, pontoCalibracao) {
+    Swal.fire({
+        title: 'Carregando...',
+        text: 'Buscando informações das peças...',
+        allowOutsideClick: false,
+        didOpen: () => {
+            Swal.showLoading();
+        }
+    });
+
     fetch(`/instrumento/info/ultima_analise/${pontoCalibracao}/${idEnvio}/`)
         .then(response => response.json())
         .then(data => {
+
+            Swal.close();
             const info = data.info[0];
             const analise = info.analise_certificado;
 

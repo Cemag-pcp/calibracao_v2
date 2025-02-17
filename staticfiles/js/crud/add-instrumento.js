@@ -181,9 +181,17 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 function getCsrfTokenAddInstrument() {
+    // Primeiro, tenta obter o token do input oculto no formulário
+    const csrfInput = document.querySelector('input[name="csrfmiddlewaretoken"]');
+    if (csrfInput) {
+        return csrfInput.value;
+    }
+
+    // Se não encontrar o input, tenta pegar dos cookies
     const cookieValue = document.cookie
         .split('; ')
         .find((row) => row.startsWith('csrftoken='))
         ?.split('=')[1];
+
     return cookieValue || '';
 }
