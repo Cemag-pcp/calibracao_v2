@@ -1,6 +1,7 @@
 from django.shortcuts import render,get_object_or_404
 from django.http import JsonResponse
 from django.db import transaction
+from django.contrib.auth.decorators import login_required
 
 from cadastro.models import InfoInstrumento, Operadores, DesignarInstrumento, Funcionario
 from inspecao.models import Laboratorio, Envio, AnaliseCertificado, PontoCalibracao, Versao
@@ -10,6 +11,7 @@ from cadastro.utils import *
 import json
 from datetime import datetime
 
+@login_required
 def enviar_view(request):
     with transaction.atomic():
         if request.method == 'POST':
@@ -111,7 +113,7 @@ def enviar_view(request):
                     )
 
                     if laboratorio_object.nome == 'N/A':
-                        descricao = f'Instrumento enviado para calibração no ponto {ponto.descricao} no dia {data_envio}.\nLaboratório responsável: Instrumento novo com certificado'
+                        descricao = f'Instrumento enviado para calibração no ponto {ponto.descricao} no dia {data_envio}.\n Instrumento novo com certificado'
                     else:    
                         descricao = f'Instrumento enviado para calibração no ponto {ponto.descricao} no dia {data_envio}.\nLaboratório responsável: {laboratorio_object}'
 
@@ -123,6 +125,7 @@ def enviar_view(request):
 
     return JsonResponse({'status': 'error', 'message': 'Método não permitido'}, status=405)
 
+@login_required
 def receber_view(request):
         
     if request.method == 'POST':
@@ -192,6 +195,7 @@ def receber_view(request):
 
     return JsonResponse({'status': 'error', 'message': 'Método não permitido'}, status=405)
 
+@login_required
 def analisar_view(request):
     if request.method == 'POST':
         with transaction.atomic():
@@ -254,6 +258,7 @@ def analisar_view(request):
 
     return JsonResponse({'status': 'error', 'message': 'Método não permitido'}, status=405)
 
+@login_required
 def info_instrumento(request,pk_ponto,id_envio):
 
     ponto_calibracao_object = get_object_or_404(PontoCalibracao, pk=pk_ponto)
@@ -274,6 +279,7 @@ def info_instrumento(request,pk_ponto,id_envio):
 
     return JsonResponse({'info':info})
 
+@login_required
 def info_instrumento_ultima_analise(request,pk_ponto,id_envio):
 
     ponto_calibracao_object = get_object_or_404(PontoCalibracao, pk=pk_ponto)
@@ -310,6 +316,7 @@ def info_instrumento_ultima_analise(request,pk_ponto,id_envio):
 
     return JsonResponse({'info':info})
 
+@login_required
 def versoes(request):
 
     versao = Versao.objects.all()

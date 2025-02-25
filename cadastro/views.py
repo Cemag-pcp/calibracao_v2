@@ -8,6 +8,7 @@ from django.db import transaction
 from django.db.utils import IntegrityError
 from django.utils.dateparse import parse_date
 from django.core.files.base import ContentFile
+from django.contrib.auth.decorators import login_required
 
 from inspecao.models import Envio, Laboratorio, AnaliseCertificado
 from ficha.models import AssinaturaInstrumento, StatusInstrumento
@@ -50,6 +51,7 @@ def formatar_responsavel(designacao):
             'dataEntrega': None
         }
 
+@login_required
 def instrumento_detail(request, pk):
     instrumento = get_object_or_404(InfoInstrumento, pk=pk)
     calibracoes = instrumento.envios.all()
@@ -63,6 +65,7 @@ def instrumento_detail(request, pk):
         'ultimo_responsavel': ultimo_responsavel,
     })
 
+@login_required
 def home(request):
     
     laboratorios = Laboratorio.objects.filter(status='ativo')
@@ -81,6 +84,7 @@ def home(request):
                                          'motivos':motivos,
                                          'instrumentos':instrumento})
 
+@login_required
 def instrumentos_data(request):
     hoje = datetime.now().date()
     start_date = time.time()
@@ -214,6 +218,7 @@ def instrumentos_data(request):
 
     return JsonResponse(data)
 
+@login_required
 def designar_instrumentos(request):
     if request.method == 'POST':
         with transaction.atomic():
@@ -317,7 +322,8 @@ def historico_view(request, tag, pk_ponto):
 
     # Retorna o histórico como JSON
     return JsonResponse({'historico': historico})
-    
+
+@login_required
 def escolher_responsavel(request):
     if request.method == 'POST':
         try:
@@ -391,6 +397,7 @@ def escolher_responsavel(request):
 
     return JsonResponse({'status': 'error', 'message': 'Método não permitido'}, status=405)
 
+@login_required
 def editar_responsavel(request):
 
     if request.method == 'POST':
@@ -475,6 +482,7 @@ def editar_responsavel(request):
 
     return JsonResponse({'status': 'error', 'message': 'Método não permitido'}, status=405)
 
+@login_required
 def substituir_instrumento(request):
     if request.method == 'POST':
         try:
@@ -644,6 +652,7 @@ def historico_datatable_instrumento(request, id):
         "historico": historico_data
     })
 
+@login_required
 def template_instrumento(request):
     # Carregar instrumentos cadastrados com os pontos de calibração relacionados
     instrumentos = InfoInstrumento.objects.prefetch_related(
@@ -665,6 +674,7 @@ def template_instrumento(request):
         'instrumentos_com_pontos_calibracao': instrumentos_com_pontos_calibracao
     })
 
+@login_required
 def add_instrumento(request):
 
     if request.method == 'POST':
@@ -741,6 +751,7 @@ def add_instrumento(request):
 
         return JsonResponse({"statusList": list_status, "typeList": list_type})
 
+@login_required
 def edit_instrumento(request):
 
     if request.method == 'POST':
@@ -817,6 +828,7 @@ def edit_instrumento(request):
 
     return JsonResponse({"message": "Método não permitido"}, status=405)
 
+@login_required
 def add_tipo_instrumento(request):
 
     with transaction.atomic():
@@ -841,6 +853,7 @@ def add_tipo_instrumento(request):
         except Exception as e:
             return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
     
+@login_required
 def adicionar_ponto_calibracao(request):
 
     if request.method == "POST":
@@ -891,6 +904,7 @@ def adicionar_ponto_calibracao(request):
 
     return JsonResponse({"error": "Método não permitido"}, status=405)
 
+@login_required
 def editar_ponto_calibracao(request):
 
     if request.method == 'POST':
@@ -958,6 +972,7 @@ def editar_ponto_calibracao(request):
 
     return JsonResponse({"message": "Método não permitido"}, status=405)
 
+@login_required
 def add_unidade_ponto_calibracao(request):
 
     try:
@@ -983,6 +998,7 @@ def add_unidade_ponto_calibracao(request):
     except Exception as e:
         return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
 
+@login_required
 def add_laboratorio(request):
 
     try:
@@ -1012,6 +1028,7 @@ def add_laboratorio(request):
     except Exception as e:
         return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
 
+@login_required
 def edit_ultima_analise(request):
 
     if request.method == 'POST':

@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Login</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-MrcW6ZMFYlzcLA8Nl+NtUVF0sA7MsXsP1UyJoMp4YLEuNSfAP+JcXn/tWtIaxVXM" crossorigin="anonymous"></script>
+    <style>
+        .full-height-pc {
+                height: 100vh;
+        }
+        @media (min-width: 768px) {
+            .full-height-pc {
+                height: 100vh;
+            }
+        }
+        @media (max-height: 500px) {
+            .full-height-pc {
+                height: 250vh;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Section: Design Block -->
+    <section>
+        <!-- Jumbotron -->
+        <div class="d-flex align-items-center px-4 py-5 px-md-5 text-center text-lg-start full-height-pc" style="background-color: hsl(0, 0%, 96%)">
+        <div class="container">
+            <div class="row gx-lg-5 align-items-center">
+            <div class="col-lg-7 mb-5 mb-lg-0">
+                <h1 class="my-5 display-3 fw-bold ls-tight">
+                <span style="color: #0a57fc;">Sistema de Calibração</span>
+                </h1>
+                <p style="color: #757f8e">
+                    Bem-vindo! Nosso sistema de calibração permite registrar e acompanhar 
+                    a calibração de equipamentos dentro da empresa, garantindo precisão, conformidade com 
+                    as normas e mais eficiência no dia a dia. Faça login para acessar.
+                </p>
+            </div>
+    
+            <div class="col-lg-5 mb-5 mb-lg-0">
+                <div class="card rounded">
+                    <div class="card-body py-5 px-md-5" >
+                        <div>
+                            <h2 class="fw-bold mb-4">Login</h2>
+                        </div>
+
+                        <!-- Exibir mensagens de erro -->
+                        {% if messages %}
+                        {% for message in messages %}
+                            {% if 'login' in message.tags %}
+                                {% if not message.tags == 'invalid_login' %}  {# Exclui mensagens de 'invalid_login' #}
+                                    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                                        {{ message }}
+                                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                                    </div>
+                                {% endif %}
+                            {% endif %}
+                        {% endfor %}
+                        {% endif %}
+
+                        <!-- Form -->
+                        <form id="logar" method="post">
+                            {% csrf_token %}
+                            <!-- 2 column grid layout with text inputs for the first and last names -->
+                            <!-- Email input -->
+                            <div data-mdb-input-init class="form-outline mb-4">
+                            {{ form.username.label_tag }}
+                            <input type="text" name="username" class="form-control mb-2" value="{{ form.username.value|default:'' }}" required>
+                            
+                            {{ form.password.label_tag }}
+                            <input type="password" name="password" class="form-control" required>  
+                            </div>
+                            <div class="d-flex justify-content-end">
+                                <div class="d-flex justify-content-end">
+                                    <button id="login-edit" class="btn btn-primary mt-4" type="submit">
+                                        <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
+                                        <span id="button-login">Login</span>
+                                    </button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            </div>
+        </div>
+        </div>
+    </section>
+
+    <script>
+        document.getElementById('logar').addEventListener('submit', function() {
+            var submitButton = document.getElementById('login-edit');
+            submitButton.disabled = true; // Desabilita o botão
+            submitButton.querySelector('.spinner-border').classList.remove('d-none'); // Exibe o spinner
+            document.getElementById('button-login').textContent = 'Logando...'; // Altera o texto
+        });
+    </script>
+
+</body>
+</html>

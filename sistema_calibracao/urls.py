@@ -9,5 +9,6 @@ urlpatterns = [
     path('', include('inspecao.urls')),
     path('', include('cadastro.urls')),
     path('', include('ficha.urls')),
+    path('', include('users.urls')),
 
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
