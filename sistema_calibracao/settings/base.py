@@ -22,7 +22,8 @@ INSTALLED_APPS = [
 
     'cadastro',
     'inspecao',
-    'ficha'
+    'ficha',
+    'users'
 ]
 
 MIDDLEWARE = [
@@ -56,18 +57,18 @@ TEMPLATES = [
 WSGI_APPLICATION = 'sistema_calibracao.wsgi.application'
 
 AUTH_PASSWORD_VALIDATORS = [
-    {
-        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
-    },
+    # {
+    #     'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
+    # },
+    # {
+    #     'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
+    # },
+    # {
+    #     'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
+    # },
+    # {
+    #     'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
+    # },
 ]
 
 
@@ -86,7 +87,10 @@ USE_I18N = True
 USE_TZ = False
 
 
-LOGIN_REDIRECT_URL = '/home/'
+LOGIN_URL = "/login/"
+LOGIN_REDIRECT_URL = "/home/"  # Redirecionamento após login
+LOGOUT_REDIRECT_URL = "/login/"  # Redirecionamento após logout
+
 STATIC_URL = 'static/'
 STATICFILES_DIRS = [
     os.path.join(BASE_DIR, 'static/'),

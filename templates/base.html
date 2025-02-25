@@ -92,7 +92,10 @@
                     </div>
                 </div>
                 <div class="sb-sidenav-footer">
-                    <a href="#" onclick="event.preventDefault(); document.getElementById('logout-form').submit();">Sair</a>
+                    <form action="{% url 'logout' %}" method="post">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-danger">Sair</button>
+                    </form>
                 </div>
             </nav>
         </div>
