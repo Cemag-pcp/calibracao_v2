@@ -22,7 +22,7 @@ function modalDesignarMaisInstrumento() {
 
     Swal.fire({
         title: 'Carregando...',
-        text: 'Buscando informações das peças...',
+        text: 'Buscando informações do instrumento...',
         allowOutsideClick: false,
         didOpen: () => {
             Swal.showLoading();

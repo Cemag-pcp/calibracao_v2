@@ -1,7 +1,7 @@
 function abrirQrCodeModal(tag) {
     Swal.fire({
         title: 'Carregando...',
-        text: 'Buscando informações das peças...',
+        text: 'Buscando QRCode...',
         allowOutsideClick: false,
         didOpen: () => {
             Swal.showLoading();
@@ -527,7 +527,7 @@ function getCsrfToken() {
 function buscarInfoInstrumento(idEnvio, pontoCalibracao) {
     Swal.fire({
         title: 'Carregando...',
-        text: 'Buscando informações das peças...',
+        text: 'Buscando informações do instrumento...',
         allowOutsideClick: false,
         didOpen: () => {
             Swal.showLoading();
@@ -567,7 +567,7 @@ function buscarInfoInstrumento(idEnvio, pontoCalibracao) {
 function buscarUltimaAnaliseInstrumento(idEnvio, pontoCalibracao) {
     Swal.fire({
         title: 'Carregando...',
-        text: 'Buscando informações das peças...',
+        text: 'Buscando última análise do instrumento...',
         allowOutsideClick: false,
         didOpen: () => {
             Swal.showLoading();
