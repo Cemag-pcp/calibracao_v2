@@ -121,7 +121,7 @@ def emissao_ficha_por_funcionario(request, id):
             ws['H6'] = funcionario.matricula
             ws['H7'] = funcionario.setor.nome
             ws.merge_cells(start_row=12, start_column=3, end_row=12, end_column=5)
-
+            
             # Cria a pasta 'ficha' se não existir
             output_dir = "media/ficha"
             os.makedirs(output_dir, exist_ok=True)
