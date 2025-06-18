@@ -6,6 +6,8 @@ __pycache__/
 # C extensions
 *.so
 
+base_dados_funcionarios.json
+
 # Distribution / packaging
 .Python
 build/
