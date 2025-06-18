@@ -85,9 +85,8 @@ class PontoCalibracao(models.Model):
         on_delete=models.CASCADE, 
         related_name='pontos_calibracao'
     )
-    unidade = models.ForeignKey('Unidade', on_delete=models.CASCADE)
     faixa_nominal = models.CharField(max_length=50)
-    unidade = models.CharField(max_length=20)
+    unidade = models.CharField(max_length=20, null=True, blank=True ,default="-")
     tolerancia_admissivel = models.FloatField(blank=True, null=True)
     status_ponto_calibracao = models.CharField(
         max_length=10, 
