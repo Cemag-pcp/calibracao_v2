@@ -132,17 +132,20 @@ document.addEventListener("DOMContentLoaded", () => {
         const unitInstrumento = document.getElementById("input-unidade-instrumento").value;
         const selectUnidade = document.getElementById("unidade-pc");
 
-        const cookieValue = document.cookie.split('; ').find((row) => row.startsWith('csrftoken='))?.split('=')[1];
-        if (!cookieValue) {
+        const csrfToken = document.querySelector('input[name="csrfmiddlewaretoken"]').value;
+
+        if (!csrfToken) {
             console.error("CSRF Token não encontrado!");
-            return; // Interrompe a requisição se o token não for encontrado
+            button.disabled = false;
+            spinner.style.display = "none";
+            return;
         }
 
         fetch("/add-unidade-ponto-calibracao/", {
             method: "POST",
             headers: {
                 "Content-type": "application/json",
-                'X-CSRFToken': cookieValue
+                'X-CSRFToken': csrfToken
             },
             body: JSON.stringify({ "unidade-instrumento": unitInstrumento }),
         })

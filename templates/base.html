@@ -7,7 +7,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     {% block title %}
-    <title>Gerenciador de cadastro de peça</title>
+    <title>Sistema de Calibração</title>
     {% endblock %}
 
     <!-- Estilos CSS -->
@@ -29,6 +29,7 @@
     <nav class="sb-topnav navbar navbar-expand navbar-dark bg-dark">
         <!-- Navbar Brand-->
         <a class="navbar-brand ps-3" href="/home/">CEMAG</a>
+        <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
         <!-- Sidebar Toggle-->
         <button class="btn btn-link btn-sm order-1 order-lg-0 me-4 me-lg-0" id="sidebarToggle" href="#!"><i
                 class="fas fa-bars"></i></button>
@@ -91,7 +92,10 @@
                     </div>
                 </div>
                 <div class="sb-sidenav-footer">
-                    <a href="#" onclick="event.preventDefault(); document.getElementById('logout-form').submit();">Sair</a>
+                    <form action="{% url 'logout' %}" method="post">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-danger">Sair</button>
+                    </form>
                 </div>
             </nav>
         </div>

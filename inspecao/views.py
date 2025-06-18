@@ -1,6 +1,7 @@
 from django.shortcuts import render,get_object_or_404
 from django.http import JsonResponse
 from django.db import transaction
+from django.contrib.auth.decorators import login_required
 
 from cadastro.models import InfoInstrumento, Operadores, DesignarInstrumento, Funcionario
 from inspecao.models import Laboratorio, Envio, AnaliseCertificado, PontoCalibracao, Versao
@@ -10,6 +11,7 @@ from cadastro.utils import *
 import json
 from datetime import datetime
 
+@login_required
 def enviar_view(request):
     with transaction.atomic():
         if request.method == 'POST':
@@ -110,7 +112,11 @@ def enviar_view(request):
                         status='enviado'
                     )
 
-                    descricao = f'Instrumento enviado para calibração no ponto {ponto.descricao} no dia {data_envio}.\nLaboratório responsável: {laboratorio_object}'
+                    if laboratorio_object.nome == 'N/A':
+                        descricao = f'Instrumento enviado para calibração no ponto {ponto.descricao} no dia {data_envio}.\n Instrumento novo com certificado'
+                    else:    
+                        descricao = f'Instrumento enviado para calibração no ponto {ponto.descricao} no dia {data_envio}.\nLaboratório responsável: {laboratorio_object}'
+
                     registrar_envio_calibracao(instrumento_object, ponto, descricao)
 
                 return JsonResponse({'status': 'success', 'message': 'Instrumento enviado para calibração em todos os pontos!'}, status=200)
@@ -119,6 +125,7 @@ def enviar_view(request):
 
     return JsonResponse({'status': 'error', 'message': 'Método não permitido'}, status=405)
 
+@login_required
 def receber_view(request):
         
     if request.method == 'POST':
@@ -171,7 +178,11 @@ def receber_view(request):
                     envio_object.calcular_proxima_calibracao()
 
                     # Registra o recebimento da calibração
-                    descricao = f'Instrumento no ponto {envio_object.ponto_calibracao}, recebido do laboratório {envio_object.laboratorio} dia {data_recebimento}.'
+                    if envio_object.laboratorio.nome == 'N/A':
+                        descricao = f'Instrumento no ponto {envio_object.ponto_calibracao}. Instrumento novo com certificado recebido no dia {data_recebimento}. <a href="{link_certificado}" target="_blank">Link do Certificado</a>'
+                    else:
+                        descricao = f'Instrumento no ponto {envio_object.ponto_calibracao}, recebido do laboratório {envio_object.laboratorio} dia {data_recebimento}. <a href="{link_certificado}" target="_blank">Link do Certificado</a>'
+
                     registrar_recebimento_calibracao(envio_object.instrumento, envio_object.ponto_calibracao, descricao)
 
                 return JsonResponse({'status': 'success', 'message': 'Instrumentos recebidos com sucesso'}, status=200)
@@ -184,6 +195,7 @@ def receber_view(request):
 
     return JsonResponse({'status': 'error', 'message': 'Método não permitido'}, status=405)
 
+@login_required
 def analisar_view(request):
     if request.method == 'POST':
         with transaction.atomic():
@@ -246,6 +258,7 @@ def analisar_view(request):
 
     return JsonResponse({'status': 'error', 'message': 'Método não permitido'}, status=405)
 
+@login_required
 def info_instrumento(request,pk_ponto,id_envio):
 
     ponto_calibracao_object = get_object_or_404(PontoCalibracao, pk=pk_ponto)
@@ -266,6 +279,7 @@ def info_instrumento(request,pk_ponto,id_envio):
 
     return JsonResponse({'info':info})
 
+@login_required
 def info_instrumento_ultima_analise(request,pk_ponto,id_envio):
 
     ponto_calibracao_object = get_object_or_404(PontoCalibracao, pk=pk_ponto)
@@ -302,6 +316,7 @@ def info_instrumento_ultima_analise(request,pk_ponto,id_envio):
 
     return JsonResponse({'info':info})
 
+@login_required
 def versoes(request):
 
     versao = Versao.objects.all()
