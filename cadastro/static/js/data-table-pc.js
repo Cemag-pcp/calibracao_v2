@@ -2,8 +2,8 @@ $(document).ready(function () {
     const table = $('#instrumentos-table').DataTable({
         processing: true,
         serverSide: true,
-        pageLength: 5, // Itens por página
-        lengthMenu: [[5, 10, 25, 50], [5, 10, 25, 50]], // Opções de paginação
+        pageLength: 10, // Itens por página
+        lengthMenu: [[10, 25, 50], [10, 25, 50]], // Opções de paginação
         ajax: {
             url: '/instrumentos-data/', // URL da view criada
             type: 'GET',
