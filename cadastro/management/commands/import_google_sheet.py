@@ -208,11 +208,11 @@ class Command(BaseCommand):
                         created_count += 1
                         action = "Criado"
                         marca = marca_na
+                        instrumento.ultima_calibracao = data_calibracao
                     
                     # Atualiza os campos do instrumento
                     instrumento.tipo_instrumento = tipo_instrumento
                     instrumento.marca = marca
-                    instrumento.ultima_calibracao = data_calibracao
                     instrumento.tempo_calibracao = 365  # Valor padrão, pode ser ajustado
                     instrumento.save()
                     

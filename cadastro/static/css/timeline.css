@@ -178,3 +178,19 @@ th {
     background-color: #0d6efd;
     color: white;
 }
+
+.btn-white{
+    background-color: white;
+    border-color: #e4e4e7;
+    font-weight: 600;
+}
+
+.btn-white:hover{
+    background-color: rgb(240, 240, 240);
+    border-color: #e4e4e7;
+    font-weight: 600;
+}
+
+.btn-white:active{
+    border-color: #e4e4e7 !important;
+}
