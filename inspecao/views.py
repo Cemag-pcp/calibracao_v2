@@ -286,6 +286,7 @@ def info_instrumento_ultima_analise(request,pk_ponto,id_envio):
     
     faixa_nominal = ponto_calibracao_object.faixa_nominal
     tol_admissivel = ponto_calibracao_object.tolerancia_admissivel
+    unidade = ponto_calibracao_object.unidade
 
     envio = Envio.objects.filter(ponto_calibracao_id=pk_ponto).order_by('-id').first()
     # envio = get_object_or_404(Envio, ponto_calibracao_id=pk_ponto)
@@ -304,6 +305,7 @@ def info_instrumento_ultima_analise(request,pk_ponto,id_envio):
         'ponto_calibracao': {
             'faixa_nominal':faixa_nominal,
             'tol_admissivel':tol_admissivel if tol_admissivel else None,
+            'unidade':unidade,
         },
         'analise_certificado': {
             'analise_certificado': analise_certificado.analise_certificado,
@@ -311,7 +313,8 @@ def info_instrumento_ultima_analise(request,pk_ponto,id_envio):
             'tendencia': analise_certificado.tendencia,
             'responsavel_analise': analise_certificado.responsavel_analise.id if analise_certificado.responsavel_analise else None,
             'data_analise': analise_certificado.data_analise,
-        }
+        },
+        'pdf': envio.pdf
     }]
 
     return JsonResponse({'info':info})

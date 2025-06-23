@@ -17,6 +17,7 @@ urlpatterns = [
 
     path('adicionar-ponto-calibracao/', views.adicionar_ponto_calibracao, name='adicionar_ponto_calibracao'),
     path('editar-ponto-calibracao/', views.editar_ponto_calibracao, name='editar-ponto-calibracao'),
+    path('editar-certificado/<int:id>/', views.edit_certificado, name='edit-certificado'),
 
     path('add-unidade-ponto-calibracao/', views.add_unidade_ponto_calibracao, name='add_unidade_ponto_calibracao'),
     path('add-laboratorio/', views.add_laboratorio, name='add-laboratorio'),

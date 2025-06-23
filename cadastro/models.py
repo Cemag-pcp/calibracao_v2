@@ -202,7 +202,8 @@ class HistoricoInstrumento(models.Model):
         ('troca_reponsavel', 'Troca de responsável'),
         ('atribuicao','Atribuição'),
         ('danificado', 'Danificado'),
-        ('devolvido', 'Devolvido')
+        ('devolvido', 'Devolvido'),
+        ('link_modificado', 'Link Modificado')
     ]
 
     instrumento = models.ForeignKey(InfoInstrumento, on_delete=models.CASCADE, related_name='historico')

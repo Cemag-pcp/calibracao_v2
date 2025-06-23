@@ -75,6 +75,15 @@ def home(request):
     motivos = AssinaturaInstrumento.STATUS_CHOICES
     funcionarios = Funcionario.objects.all()
     instrumento = InfoInstrumento.objects.all()
+    status_instrumento = InfoInstrumento.STATUS_INSTRUMENTO_CHOICES
+
+    status_calibracao = (
+        ('atrasado', 'Atrasado'), 
+        ('em_dia', 'Em dia'), 
+        ('em_calibracao', 'Em calibração'), 
+        ('a_analisar', 'A analisar')
+    )
+
 
     return render(request, "home.html", {'laboratorios':laboratorios,
                                          'operadores':operadores,
@@ -82,7 +91,9 @@ def home(request):
                                          'metodos':metodos,
                                          'funcionarios':funcionarios,
                                          'motivos':motivos,
-                                         'instrumentos':instrumento})
+                                         'instrumentos':instrumento,
+                                         'status_instrumento':status_instrumento,
+                                         'status_calibracao':status_calibracao})
 
 @login_required
 def instrumentos_data(request):
@@ -372,7 +383,7 @@ def escolher_responsavel(request):
                 else:
                     # Cria uma nova designação
                     descricao = f"Atribuindo a responsabilidade para: {funcionario_object.matricula} - {funcionario_object.nome} na data {data_entrega}"
-                    registrar_primeiro_responsavel(instrumento_object,descricao=descricao)
+                    registrar_primeiro_responsavel(instrumento_object, descricao=descricao)
 
                     designacao = DesignarInstrumento.objects.create(
                         instrumento_escolhido=instrumento_object,
@@ -1086,4 +1097,32 @@ def edit_ultima_analise(request):
             except Exception as e:
                 return JsonResponse({"message": f"Nenhuma alteração realizada. {e}"}, status=400)
 
+    return JsonResponse({"message": "Método não permitido"}, status=405)
+
+def edit_certificado(request, id):
+    if request.method == 'PATCH':
+        try:
+            data = json.loads(request.body)
+            dados_envio = Envio.objects.filter(id=id).first()
+
+            print(data)
+            print(dados_envio)
+            
+            if not dados_envio:
+                return JsonResponse({"error": "Envio não encontrado"}, status=404)
+            
+            dados_envio.pdf = data.get('certificado')  # Mais seguro que data.certificado
+            dados_envio.save()
+
+            descricao = f'Link do certificado alterado para: <a href="{data.get("certificado")}" target="_blank">Novo link do Certificado</a>'
+
+            registrar_instrumento_alterar_link(dados_envio.instrumento, descricao)
+            
+            return JsonResponse({"success": "Editado com sucesso"}, status=200)
+            
+        except json.JSONDecodeError:
+            return JsonResponse({"error": "JSON inválido"}, status=400)
+        except Exception as e:
+            return JsonResponse({"error": str(e)}, status=500)
+    
     return JsonResponse({"message": "Método não permitido"}, status=405)

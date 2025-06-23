@@ -206,12 +206,14 @@ function analisarCalibracao(idEnvio,tag,pontoCalibracao) {
 
 function ultimaAnalise(idEnvio,tag,pontoCalibracao, pdf) {
 
-    document.getElementById('modal-title-ultima-analise').textContent = `Analisar: ${tag}`;
-    document.getElementById('id-instrumento-ultima-analise').value = idEnvio;
-    document.getElementById('certificadoAtualUltimaAnalise').href = pdf;
+    const modalTitle = document.getElementById('modal-title-ultima-analise');
+    const modal = document.getElementById('modal-ultima-analise');
+    modalTitle.textContent = `Analisar: ${tag}`;
+    modal.setAttribute('data-id', idEnvio);
     document.getElementById('formUltimaAnalise').reset();
 
     console.log(idEnvio)
+    console.log(pontoCalibracao)
 
     buscarUltimaAnaliseInstrumento(idEnvio,pontoCalibracao)
 
@@ -589,9 +591,11 @@ function buscarUltimaAnaliseInstrumento(idEnvio, pontoCalibracao) {
             document.getElementById('tendeciaUltimaAnalise').value = analise.tendencia;
             document.getElementById('dataUltimaAnalise').value = analise.data_analise;
             document.getElementById('resultadoUltimaAnalise').value = analise.analise_certificado; // Supondo que este valor seja "aprovado" ou "reprovado"
+            document.getElementById('certificadoAtualUltimaAnalise').href = info.pdf;
 
             // Preenchendo as informações do instrumento
             document.getElementById('faixaNominalUltimaAnalise').textContent = info.ponto_calibracao.faixa_nominal;
+            document.getElementById('unidadeUltimaAnalise').value = info.ponto_calibracao.unidade;
             document.getElementById('toleranciaAdmissivelUltimaAnalise').textContent = info.ponto_calibracao.tol_admissivel;
 
             const modalElement = document.getElementById('modal-ultima-analise');

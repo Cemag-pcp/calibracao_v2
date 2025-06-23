@@ -163,6 +163,7 @@ $(document).ready(function () {
         ],
         responsive: true,
         autoWidth: false,       // Desativa ajuste automático da largura das colunas
+        searching: false,
         order: [[1, 'asc']],
     });
 
