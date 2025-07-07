@@ -24,47 +24,56 @@
             <p class="fw-bold mx-2 my-1">Filtrar Instrumentos</p>
             <hr>
             <h6 class="mt-3">Pesquisar Tag</h6>
-            <input type="text" class="form-control mb-3" id="pesquisar-peca-inspecao" placeholder="Pesquisar a tag...">
+            <input type="text" class="form-control mb-3" id="pesquisar-tag-calibracao" placeholder="Pesquisar a tag...">
 
             <h6 class="mt-3">Pesquisar Tipo de Instrumento</h6>
-            <input type="text" class="form-control mb-3" id="pesquisar-peca-inspecao" placeholder="Pesquisar o instrumento...">
+            <input type="text" class="form-control mb-3" id="pesquisar-tipo-calibracao" placeholder="Pesquisar o instrumento...">
 
             <h6 class="mt-3">Intervalo de data da última calibração</h6>
             <div class="d-flex justify-content-between align-items-center">
-                <input type="date" class="form-control" id="data-filtro-inspecao" style="width: 200px;">
+                <input type="date" class="form-control" id="data-ultima-calibracao-inicio" style="width: 200px;">
                 <span>até</span>
-                <input type="date" class="form-control" style="width: 200px;">
+                <input type="date" class="form-control" id="data-ultima-calibracao-fim" style="width: 200px;">
             </div>
 
             <h6 class="mt-3">Intervalo de data da próxima calibração</h6>
             <div class="d-flex justify-content-between align-items-center">
-                <input type="date" class="form-control" id="data-filtro" style="width: 200px;">
+                <input type="date" class="form-control" id="data-proxima-calibracao-inicio" style="width: 200px;">
                 <span>até</span>
-                <input type="date" class="form-control" style="width: 200px;">
+                <input type="date" class="form-control" id="data-proxima-calibracao-fim" style="width: 200px;">
             </div>
 
             <h6 class="mt-3">Status do Instrumento</h6>
             {% for instrumento in status_instrumento %}
                 <div class="form-check">
-                    <input type="checkbox" name="{{instrumento.0}}" id="{{instrumento.0}}">
-                    <label class="form-check-label" for="{{instrumento.0}}">{{instrumento.1}}</label>
+                    <input type="checkbox" name="status_instrumento_{{instrumento.0}}" id="status_instrumento_{{instrumento.0}}" value="{{instrumento.0}}">
+                    <label class="form-check-label" for="status_instrumento_{{instrumento.0}}">{{instrumento.1}}</label>
                 </div>
             {% endfor %}
 
             <h6 class="mt-3">Status da Calibração</h6>
             {% for calibracao in status_calibracao %}
                 <div class="form-check">
-                    <input type="checkbox" name="{{calibracao.0}}" id="{{calibracao.0}}">
-                    <label class="form-check-label" for="{{calibracao.0}}">{{calibracao.1}}</label>
+                    <input type="checkbox" name="status_calibracao_{{calibracao.0}}" id="status_calibracao_{{calibracao.0}}" value="{{calibracao.1}}">
+                    <label class="form-check-label" for="status_calibracao_{{calibracao.0}}">{{calibracao.1}}</label>
                 </div>
             {% endfor %}
     
             <div class="d-flex justify-content-between mt-3">
-                <button type="button" id="btn-limpar-inspecao-montagem"  class="btn btn-outline-secondary">Limpar</button>
-                <button type="button" id="btn-filtrar-inspecao-montagem" class="btn btn-dark">Filtrar</button>
+                <button type="button" id="btn-limpar-calibracao"  class="btn btn-outline-secondary">Limpar</button>
+                <button type="button" id="btn-filtrar-calibracao" class="btn btn-dark">Filtrar</button>
             </div>
         </div>
     </form>
+</div>
+
+<div class="d-flex justify-content-end flex-wrap gap-2 my-2">
+    <span id="itens-filtrados-calibracao-tag" class="rounded-pill py-1 px-2" style="background-color: #ebebeb; color: #3d3d3d; font-weight: 600; font-size: 0.75rem; display: none;"></span>
+    <span id="itens-filtrados-calibracao-tipo" class="rounded-pill py-1 px-2" style="background-color: #ebebeb; color: #3d3d3d; font-weight: 600; font-size: 0.75rem; display: none;"></span>
+    <span id="itens-filtrados-calibracao-data-ultima" class="rounded-pill py-1 px-2" style="background-color: #ebebeb; color: #3d3d3d; font-weight: 600; font-size: 0.75rem; display: none;"></span>
+    <span id="itens-filtrados-calibracao-data-proxima" class="rounded-pill py-1 px-2" style="background-color: #ebebeb; color: #3d3d3d; font-weight: 600; font-size: 0.75rem; display: none;"></span>
+    <span id="itens-filtrados-calibracao-status-instrumento" class="rounded-pill py-1 px-2" style="background-color: #ebebeb; color: #3d3d3d; font-weight: 600; font-size: 0.75rem; display: none;"></span>
+    <span id="itens-filtrados-calibracao-status-calibracao" class="rounded-pill py-1 px-2" style="background-color: #ebebeb; color: #3d3d3d; font-weight: 600; font-size: 0.75rem; display: none;"></span>
 </div>
 
 <table id="instrumentos-table" class="display table table-striped table-bordered">
