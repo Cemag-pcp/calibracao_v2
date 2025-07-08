@@ -17,16 +17,12 @@ const table = $('#instrumentos-table').DataTable({
                 statusInstrumento.push(checkbox.value);
             });
             d.status_instrumento = statusInstrumento.join(',');
-            
-            console.log(d.status_instrumento)
             // Status da calibração
             let statusCalibracao = [];
             document.querySelectorAll('input[name^="status_calibracao_"]:checked').forEach(checkbox => {
                 statusCalibracao.push(checkbox.value);
             });
             d.status_calibracao = statusCalibracao.join(',');
-
-            console.log(d.status_calibracao)
             
             // Datas de última calibração
             d.data_ultima_inicio = $('#data-ultima-calibracao-inicio').val();
@@ -49,7 +45,7 @@ const table = $('#instrumentos-table').DataTable({
             data: null,
             defaultContent: '<i class="fa fa-plus-circle text-primary" title="Expandir"></i>',
         },
-        { data: 'tag', title: 'Tag' },
+        { data: 'tag', title: 'Tag', orderable: true},
         { data: 'tipo_instrumento', title: 'Tipo de Instrumento'},
         { 
             data: 'status_instrumento',
@@ -78,6 +74,7 @@ const table = $('#instrumentos-table').DataTable({
             title: 'Status da Calibração',
             orderable: false,
             render: function (data) {
+                console.log(data)
                 if (data.includes('Atrasado')) {
                     return `<span class="text-danger">${data}</span>`;
                 }
@@ -197,7 +194,7 @@ const table = $('#instrumentos-table').DataTable({
     responsive: true,
     autoWidth: false,       // Desativa ajuste automático da largura das colunas
     searching: false,
-    order: [[4, 'asc']],
+    order: [[4, 'asc'], [1, 'asc']],
 });
 
 $('#instrumentos-table tbody').on('click', 'td.details-control', function () {
