@@ -88,3 +88,15 @@ def registrar_instrumento_devolucao(instrumento, descricao):
         descricao_mudanca=descricao,
         data_mudanca=timezone.now()
     )
+
+def registrar_instrumento_alterar_link(instrumento, descricao):
+    """
+    Registra no histórico o instrumento devolvido.
+    """
+
+    HistoricoInstrumento.objects.create(
+        instrumento=instrumento,
+        tipo_mudanca='link_modificado',
+        descricao_mudanca=descricao,
+        data_mudanca=timezone.now()
+    )

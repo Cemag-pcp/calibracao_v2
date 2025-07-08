@@ -37,6 +37,18 @@ def calcular_status_calibracao(ultimo_envio, proxima_calibracao, hoje):
     else:
         return 'Sem próxima calibração definida'
 
+def determinar_status_calibracao_val(ultimo_envio, proxima_calibracao, hoje):
+    if ultimo_envio and ultimo_envio.status == 'enviado':
+        return 'Em calibração'
+    elif ultimo_envio and ultimo_envio.status == 'recebido' and not ultimo_envio.analise_envio.first():
+        return 'A analisar'
+    elif proxima_calibracao:
+        if proxima_calibracao >= hoje:
+            return 'Em dia'
+        else:
+            return 'Atrasado'
+    return None
+
 def formatar_responsavel(designacao):
     if designacao and designacao.responsavel:
         return {
@@ -75,6 +87,15 @@ def home(request):
     motivos = AssinaturaInstrumento.STATUS_CHOICES
     funcionarios = Funcionario.objects.all()
     instrumento = InfoInstrumento.objects.all()
+    status_instrumento = InfoInstrumento.STATUS_INSTRUMENTO_CHOICES
+
+    status_calibracao = (
+        ('atrasado', 'Atrasado'), 
+        ('em_dia', 'Em dia'), 
+        ('em_calibracao', 'Em calibração'), 
+        ('a_analisar', 'A analisar')
+    )
+
 
     return render(request, "home.html", {'laboratorios':laboratorios,
                                          'operadores':operadores,
@@ -82,7 +103,9 @@ def home(request):
                                          'metodos':metodos,
                                          'funcionarios':funcionarios,
                                          'motivos':motivos,
-                                         'instrumentos':instrumento})
+                                         'instrumentos':instrumento,
+                                         'status_instrumento':status_instrumento,
+                                         'status_calibracao':status_calibracao})
 
 @login_required
 def instrumentos_data(request):
@@ -93,9 +116,18 @@ def instrumentos_data(request):
     draw = int(request.GET.get('draw', 1))
     start = int(request.GET.get('start', 0))
     length = int(request.GET.get('length', 5))
-    search_value = request.GET.get('search[value]', '')
     order_column_index = int(request.GET.get('order[0][column]', 0))
     order_direction = request.GET.get('order[0][dir]', 'asc')
+
+    # Parâmetros dos filtros personalizados
+    tag = request.GET.get('tag', '').strip()
+    tipo = request.GET.get('tipo', '').strip()
+    status_instrumento = request.GET.get('status_instrumento', '').split(',') if request.GET.get('status_instrumento') else []
+    status_calibracao = request.GET.get('status_calibracao', '').split(',') if request.GET.get('status_calibracao') else []
+    data_ultima_inicio = request.GET.get('data_ultima_inicio', '')
+    data_ultima_fim = request.GET.get('data_ultima_fim', '')
+    data_proxima_inicio = request.GET.get('data_proxima_inicio', '')
+    data_proxima_fim = request.GET.get('data_proxima_fim', '')
 
     # Mapeamento de colunas para ordenação
     column_map = {
@@ -108,91 +140,89 @@ def instrumentos_data(request):
     }
     order_column = column_map.get(order_column_index, 'tag')
 
-    # Pré-carregar envios e análises de certificados
-    envios_prefetch = Prefetch(
-        'ponto',
-        queryset=Envio.objects.prefetch_related(
-            Prefetch(
-                'analise_envio',
-                queryset=AnaliseCertificado.objects.all()
-            )
-        ).order_by('-id')
-    )
-
-    pontos_calibracao_prefetch = Prefetch(
-        'pontos_calibracao',
-        queryset=PontoCalibracao.objects.prefetch_related(envios_prefetch)
-    )
-
-    assinaturas_prefetch = Prefetch(
-        'assinatura_instrumento',
-        queryset=AssinaturaInstrumento.objects.order_by('-data_assinatura')
-    )
-
-    # Consulta otimizada
+    # Consulta base otimizada
     instrumentos_queryset = InfoInstrumento.objects.select_related(
         'tipo_instrumento', 'marca'
     ).prefetch_related(
-        pontos_calibracao_prefetch,
-        assinaturas_prefetch,
+        Prefetch('pontos_calibracao', queryset=PontoCalibracao.objects.prefetch_related(
+            Prefetch('ponto', queryset=Envio.objects.prefetch_related(
+                Prefetch('analise_envio', queryset=AnaliseCertificado.objects.all())
+            ).order_by('-id'))
+        )),
+        Prefetch('assinatura_instrumento', queryset=AssinaturaInstrumento.objects.order_by('-data_assinatura')),
         'designar_instrumento'
     ).filter(pontos_calibracao__isnull=False).distinct()
 
-    # Aplicar filtro de busca
-    if search_value:
-        instrumentos_queryset = instrumentos_queryset.filter(
-            Q(tag__icontains=search_value) |
-            Q(tipo_instrumento__nome__icontains=search_value) |
-            Q(status_instrumento__icontains=search_value) |
-            Q(ultima_calibracao__icontains=search_value) |
-            Q(proxima_calibracao__icontains=search_value)
-        )
+    # Aplicar filtros personalizados
+    if tag:
+        instrumentos_queryset = instrumentos_queryset.filter(tag__icontains=tag)
+    
+    if tipo:
+        instrumentos_queryset = instrumentos_queryset.filter(tipo_instrumento__nome__icontains=tipo)
+    
+    if status_instrumento:
+        instrumentos_queryset = instrumentos_queryset.filter(status_instrumento__in=status_instrumento)
+    
+    # Filtros de data para última calibração
+    if data_ultima_inicio and data_ultima_fim:
+        try:
+            data_inicio = datetime.strptime(data_ultima_inicio, '%Y-%m-%d').date()
+            data_fim = datetime.strptime(data_ultima_fim, '%Y-%m-%d').date()
+            instrumentos_queryset = instrumentos_queryset.filter(
+                ultima_calibracao__gte=data_inicio,
+                ultima_calibracao__lte=data_fim
+            )
+        except ValueError:
+            pass
+    
+    # Filtros de data para próxima calibração
+    if data_proxima_inicio and data_proxima_fim:
+        try:
+            data_inicio = datetime.strptime(data_proxima_inicio, '%Y-%m-%d').date()
+            data_fim = datetime.strptime(data_proxima_fim, '%Y-%m-%d').date()
+            instrumentos_queryset = instrumentos_queryset.filter(
+                proxima_calibracao__gte=data_inicio,
+                proxima_calibracao__lte=data_fim
+            )
+        except ValueError:
+            pass
 
     # Aplicar ordenação
     if order_direction == 'desc':
         order_column = f'-{order_column}'
     instrumentos_queryset = instrumentos_queryset.order_by(order_column)
 
-    # Paginação
-    total_registros = instrumentos_queryset.count()
-    instrumentos = instrumentos_queryset[start:start + length]
+    # Processamento dos dados
+    instrumentos_detalhes = []
 
-    instrumentos_detalhes = {}
-    print(instrumentos_queryset)
-    for instrumento in instrumentos:
+    for instrumento in instrumentos_queryset:
         ultima_assinatura = instrumento.assinatura_instrumento.first()
         ultimo_assinante = ultima_assinatura.assinante if ultima_assinatura else None
-
+        designacao = instrumento.designar_instrumento.first()
+        
+        # Determinar status da calibração
+        status_calibracao_str = None
+        status_calibracao_val = None
+        pontos_calibracao = []
+        
         for ponto in instrumento.pontos_calibracao.all():
             ultimo_envio = ponto.ponto.first()
             analise_certificado = ultimo_envio.analise_envio.first() if ultimo_envio else None
-
-            status_calibracao = calcular_status_calibracao(ultimo_envio, instrumento.proxima_calibracao, hoje)
-
-            designacao = instrumento.designar_instrumento.first()
-            responsavel = formatar_responsavel(designacao)
-
-            if instrumento.tag not in instrumentos_detalhes:
-                instrumentos_detalhes[instrumento.tag] = {
-                    'id': instrumento.id,
-                    'tag': instrumento.tag,
-                    'tipo_instrumento': instrumento.tipo_instrumento.nome,
-                    'marca': instrumento.marca.nome,
-                    'status_instrumento': instrumento.status_instrumento,
-                    'ultima_calibracao': instrumento.ultima_calibracao,
-                    'proxima_calibracao': instrumento.proxima_calibracao,
-                    'status_calibracao_string': status_calibracao,
-                    'status_calibracao': ultimo_envio.status if ultimo_envio else None,
-                    'tempo_calibracao': instrumento.tempo_calibracao,
-                    'responsavel': responsavel,
-                    'ultimo_assinante': {
-                        'nome': ultimo_assinante.nome if ultimo_assinante else None,
-                        'id': ultimo_assinante.id if ultimo_assinante else None
-                    },
-                    'pontos_calibracao': []
-                }
-
-            instrumentos_detalhes[instrumento.tag]['pontos_calibracao'].append({
+            
+            # Calcular status apenas uma vez por instrumento
+            if not status_calibracao_str:
+                status_calibracao_str = calcular_status_calibracao(
+                    ultimo_envio, 
+                    instrumento.proxima_calibracao, 
+                    hoje
+                )
+                status_calibracao_val = determinar_status_calibracao_val(
+                    ultimo_envio,
+                    instrumento.proxima_calibracao,
+                    hoje
+                )
+            
+            pontos_calibracao.append({
                 'ultimo_envio_pk': ultimo_envio.pk if ultimo_envio else None,
                 'ponto_pk': ponto.pk,
                 'ponto_descricao': ponto.descricao,
@@ -205,16 +235,54 @@ def instrumentos_data(request):
                 'ultimo_pdf': ultimo_envio.pdf if ultimo_envio else None,
             })
 
+        # Filtrar por status_calibracao se aplicável
+        if status_calibracao and (not status_calibracao_val or status_calibracao_val not in status_calibracao):
+            continue
+
+        responsavel = {
+            'id': designacao.responsavel.id if designacao else None,
+            'matriculaNome': f"{designacao.responsavel.matricula} - {designacao.responsavel.nome}" if designacao else None,
+            'dataEntrega': designacao.data_entrega_funcionario if designacao and designacao.data_entrega_funcionario else None
+        } if designacao and hasattr(designacao, 'responsavel') else {
+            'id': None,
+            'matriculaNome': None,
+            'dataEntrega': None
+        }
+
+        instrumentos_detalhes.append({
+            'id': instrumento.id,
+            'tag': instrumento.tag,
+            'tipo_instrumento': instrumento.tipo_instrumento.nome,
+            'marca': instrumento.marca.nome,
+            'status_instrumento': instrumento.status_instrumento,
+            'ultima_calibracao': instrumento.ultima_calibracao.strftime('%d/%m/%Y') if instrumento.ultima_calibracao else None,
+            'proxima_calibracao': instrumento.proxima_calibracao.strftime('%d/%m/%Y') if instrumento.proxima_calibracao else None,
+            'status_calibracao_string': status_calibracao_str,
+            'status_calibracao': ultimo_envio.status if ultimo_envio else None,
+            'tempo_calibracao': instrumento.tempo_calibracao,
+            'responsavel': responsavel,
+            'ultimo_assinante': {
+                'nome': ultimo_assinante.nome if ultimo_assinante else None,
+                'id': ultimo_assinante.id if ultimo_assinante else None
+            },
+            'pontos_calibracao': pontos_calibracao
+        })
+
+    # Aplicar paginação após todos os filtros
+    total_registros_filtrados = len(instrumentos_detalhes)
+    instrumentos_detalhes_paginados = instrumentos_detalhes[start:start + length]
+
     data = {
         'draw': draw,
-        'recordsTotal': total_registros,
-        'recordsFiltered': total_registros,
-        'data': list(instrumentos_detalhes.values()),
+        'recordsTotal': InfoInstrumento.objects.count(),  # Total sem filtros
+        'recordsFiltered': total_registros_filtrados,  # Total com filtros aplicados
+        'data': instrumentos_detalhes_paginados,
     }
 
     end_date = time.time()
     duration = end_date - start_date
     print(f"Duração: {duration} segundos")
+    print(data)
 
     return JsonResponse(data)
 
@@ -372,7 +440,7 @@ def escolher_responsavel(request):
                 else:
                     # Cria uma nova designação
                     descricao = f"Atribuindo a responsabilidade para: {funcionario_object.matricula} - {funcionario_object.nome} na data {data_entrega}"
-                    registrar_primeiro_responsavel(instrumento_object,descricao=descricao)
+                    registrar_primeiro_responsavel(instrumento_object, descricao=descricao)
 
                     designacao = DesignarInstrumento.objects.create(
                         instrumento_escolhido=instrumento_object,
@@ -1086,4 +1154,35 @@ def edit_ultima_analise(request):
             except Exception as e:
                 return JsonResponse({"message": f"Nenhuma alteração realizada. {e}"}, status=400)
 
+    return JsonResponse({"message": "Método não permitido"}, status=405)
+
+def edit_certificado(request, id):
+    if request.method == 'PATCH':
+        try:
+            data = json.loads(request.body)
+            dados_envio = Envio.objects.filter(id=id).first()
+
+            print(data)
+            print(dados_envio)
+            
+            if not dados_envio:
+                return JsonResponse({"error": "Envio não encontrado"}, status=404)
+            
+            dados_envio.pdf = data.get('certificado')  # Mais seguro que data.certificado
+            dados_envio.save()
+
+            if data.get("certificado"):
+                descricao = f'Link do certificado alterado para: <a href="{data.get("certificado")}" target="_blank">Novo link do Certificado</a>'
+            else:
+                descricao = f'Link do certificado foi removido'
+
+            registrar_instrumento_alterar_link(dados_envio.instrumento, descricao)
+            
+            return JsonResponse({"success": "Editado com sucesso"}, status=200)
+            
+        except json.JSONDecodeError:
+            return JsonResponse({"error": "JSON inválido"}, status=400)
+        except Exception as e:
+            return JsonResponse({"error": str(e)}, status=500)
+    
     return JsonResponse({"message": "Método não permitido"}, status=405)
