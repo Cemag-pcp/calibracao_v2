@@ -192,10 +192,6 @@ def instrumentos_data(request):
         order_column = f'-{order_column}'
     instrumentos_queryset = instrumentos_queryset.order_by(order_column)
 
-    # Paginação
-    total_registros = instrumentos_queryset.count()
-    instrumentos_paginados = instrumentos_queryset[start:start + length]
-
     # Processamento dos dados
     instrumentos_detalhes = []
 
@@ -246,7 +242,7 @@ def instrumentos_data(request):
         responsavel = {
             'id': designacao.responsavel.id if designacao else None,
             'matriculaNome': f"{designacao.responsavel.matricula} - {designacao.responsavel.nome}" if designacao else None,
-            'dataEntrega': designacao.data_entrega_funcionario.strftime('%d/%m/%Y') if designacao and designacao.data_entrega_funcionario else None
+            'dataEntrega': designacao.data_entrega_funcionario if designacao and designacao.data_entrega_funcionario else None
         } if designacao and hasattr(designacao, 'responsavel') else {
             'id': None,
             'matriculaNome': None,
@@ -262,7 +258,7 @@ def instrumentos_data(request):
             'ultima_calibracao': instrumento.ultima_calibracao.strftime('%d/%m/%Y') if instrumento.ultima_calibracao else None,
             'proxima_calibracao': instrumento.proxima_calibracao.strftime('%d/%m/%Y') if instrumento.proxima_calibracao else None,
             'status_calibracao_string': status_calibracao_str,
-            'status_calibracao': status_calibracao_val,
+            'status_calibracao': ultimo_envio.status if ultimo_envio else None,
             'tempo_calibracao': instrumento.tempo_calibracao,
             'responsavel': responsavel,
             'ultimo_assinante': {
@@ -286,6 +282,7 @@ def instrumentos_data(request):
     end_date = time.time()
     duration = end_date - start_date
     print(f"Duração: {duration} segundos")
+    print(data)
 
     return JsonResponse(data)
 
@@ -1174,7 +1171,10 @@ def edit_certificado(request, id):
             dados_envio.pdf = data.get('certificado')  # Mais seguro que data.certificado
             dados_envio.save()
 
-            descricao = f'Link do certificado alterado para: <a href="{data.get("certificado")}" target="_blank">Novo link do Certificado</a>'
+            if data.get("certificado"):
+                descricao = f'Link do certificado alterado para: <a href="{data.get("certificado")}" target="_blank">Novo link do Certificado</a>'
+            else:
+                descricao = f'Link do certificado foi removido'
 
             registrar_instrumento_alterar_link(dados_envio.instrumento, descricao)
             

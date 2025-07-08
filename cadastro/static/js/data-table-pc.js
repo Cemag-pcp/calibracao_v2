@@ -35,6 +35,11 @@ const table = $('#instrumentos-table').DataTable({
             // Datas de próxima calibração
             d.data_proxima_inicio = $('#data-proxima-calibracao-inicio').val();
             d.data_proxima_fim = $('#data-proxima-calibracao-fim').val();
+        },
+        dataSrc: function (json) {
+            $('#qtd-pendente-calibracao').html(`Quantidade Total: ${json.recordsTotal}`);
+            $('#qtd-filtrada-calibracao').html(`Quantidade Filtrada: ${json.recordsFiltered}`).show();
+            return json.data;
         }
     },
     columns: [

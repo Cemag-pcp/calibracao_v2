@@ -551,9 +551,14 @@ function buscarInfoInstrumento(idEnvio, pontoCalibracao) {
                 certificadoLink.href = data.info[0].certificado;
                 certificadoLink.target = '_blank'; // Abre o link em uma nova aba
                 certificadoLink.rel = 'noopener noreferrer'; // Melhora a segurança
+                certificadoLink.style.textDecoration = 'underline'; // Garante que pareça um link
+                certificadoLink.style.cursor = 'pointer'; // Mostra o cursor de link
             } else {
                 certificadoLink.textContent = 'Não disponível';
-                certificadoLink.href = '#'; // Define como um link não funcional
+                certificadoLink.removeAttribute('href'); // Remove completamente o href
+                certificadoLink.style.textDecoration = 'none'; // Remove o sublinhado
+                certificadoLink.style.cursor = 'default'; // Mostra o cursor padrão
+                certificadoLink.onclick = null; // Remove qualquer evento de clique
             }
 
             const modal = new bootstrap.Modal(document.getElementById('modal-analise'));
