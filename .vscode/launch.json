@@ -9,7 +9,7 @@
             "type": "debugpy",
             "request": "launch",
             "args": [
-                "runserver"
+                "import_google_sheet"
             ],
             "django": true,
             "autoStartBrowser": false,

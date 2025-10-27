@@ -85,7 +85,7 @@ class Command(BaseCommand):
             spreadsheet = gc.open_by_key(spreadsheet_key)
 
             # Lê a primeira worksheet
-            worksheet = spreadsheet.worksheets()[0]
+            worksheet = spreadsheet.worksheets()[4]
             
             # Define o mapeamento das colunas (A=1, B=2, C=3, D=4, I=9, P=16)
             COL_MAP = {
