@@ -52,8 +52,10 @@ const table = $('#instrumentos-table').DataTable({
             title: 'Status',
             orderable: true, 
             render: function(data, type, row) {
-                if (row.status_instrumento === 'ativo') {
-                    return `<span class="badge bg-success">Ativo</span>`;
+                if (row.status_instrumento === 'Aguardando retornar da calibração') {
+                    return `<span class="badge bg-success">Aguardando retornar da calibração</span>`;
+                } else if (row.status_instrumento === 'Disponível') {
+                    return `<span class="badge bg-success">Disponível</span>`;
                 } else if (row.status_instrumento === 'inativo') {
                     return `<span class="badge bg-secondary">Inativo</span>`;
                 } else if (row.status_instrumento === 'em_uso') {

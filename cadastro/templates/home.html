@@ -78,14 +78,16 @@
                 <span>até</span>
                 <input type="date" class="form-control" id="data-proxima-calibracao-fim" style="width: 200px;">
             </div>
-
-            <h6 class="mt-3">Status do Instrumento</h6>
-            {% for instrumento in status_instrumento %}
+            
+            <div style="display: none;">
+                <h6 class="mt-3">Status do Instrumento</h6>
+                {% for instrumento in status_instrumento %}
                 <div class="form-check">
                     <input type="checkbox" name="status_instrumento_{{instrumento.0}}" id="status_instrumento_{{instrumento.0}}" value="{{instrumento.0}}">
                     <label class="form-check-label" for="status_instrumento_{{instrumento.0}}">{{instrumento.1}}</label>
                 </div>
-            {% endfor %}
+                {% endfor %}
+            </div>
 
             <h6 class="mt-3">Status da Calibração</h6>
             {% for calibracao in status_calibracao %}

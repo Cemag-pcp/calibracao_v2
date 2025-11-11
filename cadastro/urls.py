@@ -1,5 +1,5 @@
 from django.urls import path
-from . import views
+from . import views, views_counts
 
 urlpatterns = [
     path('instrumento/<int:pk>/', views.instrumento_detail, name='instrumento_detail'),
@@ -7,6 +7,7 @@ urlpatterns = [
     path('', views.home, name='homes'),
     path('home/', views.home, name='home'),
     path('instrumentos-data/', views.instrumentos_data, name='instrumentos_data'),
+    path('dashboard-counts/', views_counts.dashboard_counts, name='dashboard_counts'),
 
     path('instrumento/qrcode/<str:tag>/', views.qrcode_view, name='qrcode_view'),
     path('instrumento/historico/<str:tag>/<int:pk_ponto>/', views.historico_view, name='historico_view'),

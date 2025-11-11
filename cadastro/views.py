@@ -261,14 +261,35 @@ def instrumentos_data(request):
                 'ultimo_pdf': envio.pdf if envio else None,
             })
 
+        if len(status_instrumento) == 1:
+            if status_instrumento[0] == 'danificado':
+                status_calibracao_str = 'N/A'
+
+        if instrumento.status_instrumento == 'ativo' and  status_calibracao_str == 'Em calibração':
+            status = 'Aguardando retornar da calibração'
+        elif instrumento.status_instrumento == 'ativo':
+            status = 'Disponível'
+        else:
+            status = instrumento.status_instrumento
+
+        # proxima calibração
+        proxima_calibracao = instrumento.proxima_calibracao.strftime('%d/%m/%Y') if instrumento.proxima_calibracao else None,
+
+        if len(status_instrumento) == 1:
+            if status_instrumento[0] == 'danificado':
+                proxima_calibracao = 'N/A'
+
+        if status_calibracao_str == 'Em calibração':
+            proxima_calibracao = 'N/A'
+
         instrumentos_detalhes.append({
             'id': instrumento.id,
             'tag': instrumento.tag,
             'tipo_instrumento': instrumento.tipo_instrumento.nome,
             'marca': instrumento.marca.nome,
-            'status_instrumento': instrumento.status_instrumento,
+            'status_instrumento': status,
             'ultima_calibracao': instrumento.ultima_calibracao.strftime('%d/%m/%Y') if instrumento.ultima_calibracao else None,
-            'proxima_calibracao': instrumento.proxima_calibracao.strftime('%d/%m/%Y') if instrumento.proxima_calibracao else None,
+            'proxima_calibracao': proxima_calibracao,
             'status_calibracao_string': status_calibracao_str,
             'status_calibracao': envio_do_primeiro_ponto.status if envio_do_primeiro_ponto else None,
             'tempo_calibracao': instrumento.tempo_calibracao,
