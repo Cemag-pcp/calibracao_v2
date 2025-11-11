@@ -13,6 +13,42 @@
     <button type="button" class="btn btn-primary btn-sm" id="button-modal-designarcao"><i class="fa-solid fa-plus"></i> Designar mais de um instrumento por funcionário</button>
 </div>
 
+<!-- Cards de resumo -->
+<div class="row g-3 mb-4" id="cards-dashboard">
+    <div class="col-6 col-lg-3">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body">
+                <div class="text-muted small">Em calibração</div>
+                <div class="h3 mb-0" id="count-em-calibracao">—</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-lg-3">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body">
+                <div class="text-muted small">Em uso</div>
+                <div class="h3 mb-0" id="count-em-uso">—</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-lg-3">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body">
+                <div class="text-muted small">Disponíveis</div>
+                <div class="h3 mb-0" id="count-disponivel">—</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-lg-3">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body">
+                <div class="text-muted small">Danificado</div>
+                <div class="h3 mb-0" id="count-danificado">—</div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Filtros -->
 
 <div class="d-flex justify-content-end mb-4">
@@ -78,6 +114,25 @@
     <span id="itens-filtrados-calibracao-data-proxima" class="rounded-pill py-1 px-2" style="background-color: #ebebeb; color: #3d3d3d; font-weight: 600; font-size: 0.75rem; display: none;"></span>
     <span id="itens-filtrados-calibracao-status-instrumento" class="rounded-pill py-1 px-2" style="background-color: #ebebeb; color: #3d3d3d; font-weight: 600; font-size: 0.75rem; display: none;"></span>
     <span id="itens-filtrados-calibracao-status-calibracao" class="rounded-pill py-1 px-2" style="background-color: #ebebeb; color: #3d3d3d; font-weight: 600; font-size: 0.75rem; display: none;"></span>
+</div>
+
+<!-- Tabs de status -->
+<div class="mb-3">
+    <ul class="nav nav-tabs" id="statusTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="tab-em-uso" data-type="instrumento" data-status="em_uso" type="button" role="tab" aria-selected="true">Em uso</button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="tab-disponivel" data-type="instrumento" data-status="ativo" type="button" role="tab" aria-selected="false">Disponível</button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="tab-danificado" data-type="instrumento" data-status="danificado" type="button" role="tab" aria-selected="false">Danificado</button>
+        </li>
+    </ul>
+    <div class="tab-content pt-3" id="statusTabsContent">
+        <!-- Usamos uma única tabela; as abas apenas aplicam o filtro de status -->
+    </div>
+    
 </div>
 
 <table id="instrumentos-table" class="display table table-striped table-bordered">
@@ -498,7 +553,6 @@
     </div>
 </div>
 
-
 <!-- Modal p/ escolher responsável -->
 <div id="modal-responsavel" class="modal fade" data-bs-backdrop="static" tabindex="-1">
     <div class="modal-dialog modal-lg">
@@ -571,8 +625,8 @@
                         </div>
                     </div>    
                     <!-- Data de entrega -->
-                    <label>Ficha</label>
-                    <img id="ficha_link" src="/static/img/termo_de_responsabilidade.png" alt="Termo de Responsabilidade">           
+                    <!-- <label>Ficha</label>
+                    <img id="ficha_link" src="/static/img/termo_de_responsabilidade.png" alt="Termo de Responsabilidade">            -->
                 </div>  
             </div>
         </div>
@@ -784,5 +838,101 @@
     <script src="{% static 'js/crud/editar-ultima-analise.js' %}"></script>
     <script src="{% static 'js/crud/editar-certificado.js' %}"></script>
     <script src="{% static 'js/crud/editar-certificado-ultima-analise.js' %}"></script>
+
+    <script>
+        // Controla a troca de abas aplicando o filtro de status do instrumento
+        function setStatusTab(status) {
+            // Desmarca todos os status do instrumento
+            $("input[name^='status_instrumento_']").prop('checked', false);
+
+            // Marca o status correspondente à aba
+            const $cb = $("#status_instrumento_" + status);
+            if ($cb.length) {
+                $cb.prop('checked', true);
+            }
+
+            // Recarrega a tabela já existente (definida em data-table-pc.js)
+            if (typeof table !== 'undefined') {
+                table.ajax.reload();
+            }
+
+            // Atualiza os chips de filtros aplicados, se a função existir
+            if (typeof atualizarFiltrosAplicados === 'function') {
+                atualizarFiltrosAplicados();
+            }
+        }
+
+        // Busca contadores e atualiza os cards
+        function carregarContadores() {
+            fetch('/dashboard-counts/')
+                .then(resp => resp.json())
+                .then(data => {
+                    if (data) {
+                        document.getElementById('count-em-calibracao').innerText = data.em_calibracao ?? 0;
+                        document.getElementById('count-em-uso').innerText = data.em_uso ?? 0;
+                        document.getElementById('count-disponivel').innerText = data.disponivel ?? 0;
+                        document.getElementById('count-danificado').innerText = data.danificado ?? 0;
+                    }
+                })
+                .catch(() => {
+                    // Em caso de erro, mantem traço
+                });
+        }
+
+        $(function () {
+            // Inicializa com a aba "Em uso"
+            setStatusTab('em_uso', 'instrumento');
+            // Carrega os contadores dos cards
+            carregarContadores();
+
+            // Clique nas abas
+            $('#statusTabs .nav-link').on('click', function () {
+                $('#statusTabs .nav-link').removeClass('active');
+                $(this).addClass('active');
+                const status = $(this).data('status');
+                const type = $(this).data('type') || 'instrumento';
+                if (type === 'calibracao') {
+                    $("input[name^='status_instrumento_']").prop('checked', false);
+                    $("input[name^='status_calibracao_']").prop('checked', false);
+                    const $cbCal = $("#status_calibracao_" + status);
+                    if ($cbCal.length) { $cbCal.prop('checked', true); }
+                    if (typeof table !== 'undefined') { table.ajax.reload(); }
+                    if (typeof atualizarFiltrosAplicados === 'function') { atualizarFiltrosAplicados(); }
+                    return;
+                }
+                setStatusTab(status, type);
+            });
+
+            // Quando o usuário limpar os filtros, mantenha o status da aba atual
+            $('#btn-limpar-calibracao').on('click', function () {
+                const activeStatus = $('#statusTabs .nav-link.active').data('status');
+                // Aguarda a limpeza padrão e reaplica o status da aba
+                setTimeout(function(){ setStatusTab(activeStatus, activeType); }, 0);
+            });
+        });
+    </script>
+
+    <script>
+        // Override do comportamento do botão Limpar para manter a aba ativa
+        $(function(){
+            $('#btn-limpar-calibracao').off('click').on('click', function () {
+                const $active = $('#statusTabs .nav-link.active');
+                const activeStatus = $active.data('status');
+                const activeType = $active.data('type') || 'instrumento';
+                setTimeout(function(){
+                    if (activeType === 'calibracao') {
+                        $("input[name^='status_instrumento_']").prop('checked', false);
+                        $("input[name^='status_calibracao_']").prop('checked', false);
+                        const $cbCal = $("#status_calibracao_" + activeStatus);
+                        if ($cbCal.length) { $cbCal.prop('checked', true); }
+                        if (typeof table !== 'undefined') { table.ajax.reload(); }
+                        if (typeof atualizarFiltrosAplicados === 'function') { atualizarFiltrosAplicados(); }
+                    } else {
+                        setStatusTab(activeStatus, activeType);
+                    }
+                }, 0);
+            });
+        });
+    </script>
 
 {% endblock %}
