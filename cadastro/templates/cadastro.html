@@ -12,15 +12,20 @@
     <button type="button" id="buttonAddInstrumento" class="btn btn-primary btn-sm"><i class="fa-solid fa-plus"></i> Add Instrumento</button>
 </div>
 
-<div class="d-flex justify-content-end">
-    <input type="text" id="filtroTag" placeholder="Filtrar por Tag..." class="form-control mb-3" style="width: 200px;"> 
+<div class="d-flex justify-content-end" style="gap: .5rem;">
+    <input type="text" id="filtroTag" placeholder="Filtrar por Tag..." class="form-control mb-3" style="width: 220px;"> 
+    <select id="filtroObrigacao" class="form-control mb-3" style="width: 220px;">
+        <option value="">Todos</option>
+        <option value="true">Obrigatório calibrar</option>
+        <option value="false">Não obrigatório calibrar</option>
+    </select>
 </div>
 
 
 <table id="example" class="display table table-striped table-bordered">
     <thead>
         <tr>
-            <th style="width: 50px;"></th>
+            <th style="width: 50px;">Pontos de calibração</th>
             <th>Tag</th>
             <th>Instrumento</th>
             <th>Marca</th>
@@ -32,7 +37,7 @@
     </thead>
     <tbody>
         {% for item in instrumentos_com_pontos_calibracao %}
-            <tr class="main-row">
+            <tr class="main-row" data-necessita-calibrar="{{ item.instrumento.necessita_calibrar|yesno:'true,false' }}">
                 <td style="width: 50px;"><button style="font-size: 10px;" class="btn btn-primary toggle-accordion"><i class="fa-solid fa-chevron-down"></i></button></td>
                 <td>{{ item.instrumento.tag }}</td>
                 <td>{{ item.instrumento.tipo_instrumento }}</td>
@@ -55,7 +60,8 @@
                             data-status="{{ item.instrumento.get_status_instrumento_display }}"
                             data-tempo="{{ item.instrumento.tempo_calibracao }}"
                             data-ultima="{{ item.instrumento.ultima_calibracao|date:'Y-m-d' }}"
-                            data-proxima="{{ item.instrumento.proxima_calibracao|date:'Y-m-d' }}">
+                            data-proxima="{{ item.instrumento.proxima_calibracao|date:'Y-m-d' }}"
+                            data-usado-pela-predial="{{ item.instrumento.necessita_calibrar }}">
                         Editar
                     </button>
                 </td>
@@ -148,6 +154,10 @@
                         <label for="modal-add-ultima">Data última calib.</label>
                         <input type="date" class="form-control" name="modal-add-ultima" id="modal-add-ultima" required>
                     </div>
+                    <div class="col-sm-6 mb-2 d-flex align-items-center" style="gap: .5rem;">
+                        <input type="checkbox" class="form-check-input" name="modal-add-usado-pela-predial" id="modal-add-usado-pela-predial">
+                        <label class="form-check-label" for="modal-add-usado-pela-predial">Necessita calibração?</label>
+                    </div>
                 </div>
             </div>
             <div class="modal-footer">
@@ -206,6 +216,10 @@
                 <div class="col-sm-6 mb-2">
                     <label for="modal-edit-proxima">Data prox. calib.</label>
                     <input type="date" class="form-control" name="modal-edit-proxima" id="modal-edit-proxima" disabled>
+                </div>
+                <div class="col-sm-6 mb-2 d-flex align-items-center" style="gap: .5rem;">
+                    <input type="checkbox" class="form-check-input" name="modal-edit-usado-pela-predial" id="modal-edit-usado-pela-predial">
+                    <label class="form-check-label" for="modal-edit-usado-pela-predial">Neessita de calibração?</label>
                 </div>
             </div>
         </div>
@@ -359,6 +373,27 @@
         });
     });
 
+    // Filtro combinado por Tag e Obrigatoriedade de Calibração
+    $(document).ready(function() {
+        function filtrarTabela() {
+            var tagValue = $("#filtroTag").val().toLowerCase();
+            var obrigacaoValue = $("#filtroObrigacao").val(); // "", "true", "false"
+
+            $("#example tbody tr.main-row").each(function() {
+                var textoTag = $(this).find("td:eq(1)").text().toLowerCase();
+                var rowNec = ($(this).attr('data-necessita-calibrar') || '').toString().toLowerCase();
+
+                var matchTag = textoTag.indexOf(tagValue) > -1;
+                var matchObrigacao = (obrigacaoValue === "") || (rowNec === obrigacaoValue);
+
+                $(this).toggle(matchTag && matchObrigacao);
+            });
+        }
+
+        $("#filtroTag").on("keyup", filtrarTabela);
+        $("#filtroObrigacao").on("change", filtrarTabela);
+    });
+
     $(document).ready(function() {
         // Função para filtrar a tabela
         $("#filtroTag").on("keyup", function() {
@@ -372,3 +407,4 @@
 </script>
 
 {% endblock %}
+

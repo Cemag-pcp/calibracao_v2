@@ -1,8 +1,9 @@
 from django.shortcuts import render, get_object_or_404
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.db.models import Max
-from django.http import JsonResponse
+from django.http import JsonResponse, Http404
 from django.db.models import Q, Prefetch, Count, OuterRef, Subquery
+from django.db import connection
 
 from django.core.cache import cache
 from django.db import transaction
@@ -112,213 +113,178 @@ def home(request):
 @login_required
 def instrumentos_data(request):
     start_time = time.time()
-    
-    # Parâmetros do DataTables
+
+    # Parâmetros DataTables
     draw = int(request.GET.get('draw', 1))
     start = int(request.GET.get('start', 0))
-    length = int(request.GET.get('length', 10)) # Ajustado para 10 como no JS
+    length = int(request.GET.get('length', 10))
     order_column_index = int(request.GET.get('order[0][column]', 0))
     order_direction = request.GET.get('order[0][dir]', 'asc')
 
-    # Parâmetros dos filtros
+    # Parâmetros de filtro
     tag = request.GET.get('tag', '').strip()
     tipo = request.GET.get('tipo', '').strip()
     status_instrumento = request.GET.get('status_instrumento', '').split(',') if request.GET.get('status_instrumento') else []
     status_calibracao = request.GET.get('status_calibracao', '').split(',') if request.GET.get('status_calibracao') else []
+    necessita_calibrar_str = request.GET.get('necessita_calibrar', '').strip()
     data_ultima_inicio = request.GET.get('data_ultima_inicio', '')
     data_ultima_fim = request.GET.get('data_ultima_fim', '')
     data_proxima_inicio = request.GET.get('data_proxima_inicio', '')
     data_proxima_fim = request.GET.get('data_proxima_fim', '')
 
-    # Mapeamento de colunas para ordenação
+    # Mapeamento das colunas ordenáveis
     column_map = {
         0: 'tag',
-        1: 'tipo_instrumento__nome',
+        1: 'tipo_instrumento_id',
         2: 'status_instrumento',
         3: 'ultima_calibracao',
         4: 'proxima_calibracao',
-        # O campo 5 não existe mais diretamente no DB, a ordenação será por tag se selecionado
     }
     order_column = column_map.get(order_column_index, 'tag')
+    order_dir = 'DESC' if order_direction == 'desc' else 'ASC'
 
-    # Consulta base otimizada
-    queryset = InfoInstrumento.objects.select_related(
-        'tipo_instrumento', 'marca'
-    ).prefetch_related(
-        Prefetch('pontos_calibracao', queryset=PontoCalibracao.objects.only(
-            'id', 'descricao', 'faixa_nominal', 'unidade', 
-            'tolerancia_admissivel', 'status_ponto_calibracao', 'instrumento_id'
-        )),
-        Prefetch('designar_instrumento', queryset=DesignarInstrumento.objects.select_related('responsavel')),
-        Prefetch('assinatura_instrumento', queryset=AssinaturaInstrumento.objects.select_related('assinante').order_by('-data_assinatura'))
+    # ========================= QUERY BASE =========================
+    base_query = """
+    WITH base AS (
+    SELECT DISTINCT ON (ci.id)
+        ci.id,
+        ci.tag,
+        ci.status_instrumento,
+        ct.nome AS tipo_instrumento,
+        ci.marca_id,
+        ci.ultima_calibracao,
+        ci.proxima_calibracao,
+        ci.tempo_calibracao,
+        ie.id     AS envio_id,
+        ie.status AS envio_status,
+        cp.id     AS ponto_id,
+        ci.necessita_calibrar,
+        CASE 
+            WHEN ci.status_instrumento = 'danificado' THEN 'N/A'
+            WHEN ie.status = 'recebido' AND ie.analise = FALSE THEN 'A analisar'
+            WHEN ie.status = 'recebido' AND CURRENT_DATE < ci.proxima_calibracao THEN 'Em dia'
+            WHEN ie.status = 'recebido' AND CURRENT_DATE > ci.proxima_calibracao THEN 'Atrasado'
+            WHEN ie.status = 'enviado' THEN 'Em calibração'
+            WHEN CURRENT_DATE > ci.proxima_calibracao THEN 'Atrasado'
+            ELSE 'Em dia'
+        END AS status_calibracao
+    FROM sistema_calibracao_teste.cadastro_infoinstrumento ci
+    LEFT JOIN LATERAL (
+        SELECT ie.*
+        FROM sistema_calibracao_teste.inspecao_envio ie
+        WHERE ie.instrumento_id = ci.id
+        ORDER BY ie.data_envio DESC NULLS LAST, ie.id DESC
+        LIMIT 1
+    ) ie ON TRUE
+    LEFT JOIN sistema_calibracao_teste.cadastro_pontocalibracao cp
+        ON cp.instrumento_id = ci.id
+    LEFT JOIN sistema_calibracao_teste.cadastro_tipoinstrumento ct
+        ON ct.id = ci.tipo_instrumento_id
+    ORDER BY
+        ci.id,
+        ie.data_envio DESC NULLS LAST,  -- prioriza o envio mais recente
+        ie.id        DESC,
+        cp.id        ASC                -- e o menor ponto, caso existam vários
     )
+    SELECT * FROM base WHERE 1=1
+    """
 
-    # ==================== MUDANÇA PRINCIPAL ====================
-    # Filtra a queryset para incluir APENAS instrumentos que possuem pontos de calibração.
-    # .distinct() é crucial para evitar duplicatas.
-    queryset = queryset.filter(pontos_calibracao__isnull=False).distinct()
-    # ==========================================================
-
-    # Aplicar filtros
+    # ========================= FILTROS =========================
+    params = []
     if tag:
-        queryset = queryset.filter(tag__icontains=tag)
+        base_query += " AND tag ILIKE %s"
+        params.append(f"%{tag}%")
     if tipo:
-        queryset = queryset.filter(tipo_instrumento__nome__icontains=tipo)
+        base_query += " AND tipo_instrumento_id IN (SELECT id FROM sistema_calibracao_teste.cadastro_tipoinstrumento WHERE nome ILIKE %s)"
+        params.append(f"%{tipo}%")
     if status_instrumento:
-        queryset = queryset.filter(status_instrumento__in=status_instrumento)
-    
-    # Filtros de data
+        base_query += f" AND status_instrumento = ANY(%s)"
+        params.append(status_instrumento)
+    if status_calibracao:
+        base_query += f" AND status_calibracao = ANY(%s)"
+        params.append(status_calibracao)
+    if necessita_calibrar_str.lower() in ['true', 'false']:
+        base_query += " AND necessita_calibrar = %s"
+        params.append(True if necessita_calibrar_str.lower() == 'true' else False)
     if data_ultima_inicio and data_ultima_fim:
-        try:
-            queryset = queryset.filter(ultima_calibracao__range=[data_ultima_inicio, data_ultima_fim])
-        except ValueError:
-            pass
-    
+        base_query += " AND ultima_calibracao BETWEEN %s AND %s"
+        params += [data_ultima_inicio, data_ultima_fim]
     if data_proxima_inicio and data_proxima_fim:
-        try:
-            queryset = queryset.filter(proxima_calibracao__range=[data_proxima_inicio, data_proxima_fim])
-        except ValueError:
-            pass
+        base_query += " AND proxima_calibracao BETWEEN %s AND %s"
+        params += [data_proxima_inicio, data_proxima_fim]
 
-    # Total de registros ANTES da paginação, mas DEPOIS dos filtros
-    total_filtrado_antes_paginacao = queryset.count()
+    # ========================= DEBUG =========================
 
-    # Ordenação
-    if order_direction == 'desc':
-        order_column = f'-{order_column}'
-    queryset = queryset.order_by(order_column)
+    print("METHOD:", request.method)
+    print("PATH:", request.path)
+    print("GET params:", request.GET)      # query string (?tag=123)
+    print("POST params:", request.POST)    # formulário
+    print("RAW BODY:", request.body)       # corpo bruto (JSON, etc.)
 
-    # Paginação no banco de dados
-    instrumentos_paginados = queryset[start:start + length]
+    # ========================= ORDENAÇÃO E PAGINAÇÃO =========================
 
-    # --- Otimização: A lógica de buscar pontos, envios e análises pode ser simplificada ---
-    # Como já garantimos que todos os instrumentos têm pontos, podemos processar os dados
-    
-    instrumento_ids = [i.id for i in instrumentos_paginados]
-    
-    # Buscando todos os pontos necessários de uma vez
-    pontos_dos_instrumentos = PontoCalibracao.objects.filter(instrumento_id__in=instrumento_ids)
-    
-    # Buscando os últimos envios para esses pontos
-    ultimo_envio_subquery = Envio.objects.filter(ponto_calibracao=OuterRef('pk')).order_by('-id').values('pk')[:1]
-    pontos_com_ultimo_envio = pontos_dos_instrumentos.annotate(
-        ultimo_envio_id=Subquery(ultimo_envio_subquery)
-    )
+    # 1️⃣ — Monta a query base SEM paginação (mantendo filtros aplicados)
+    # Aqui você não deve adicionar ORDER BY ou LIMIT ainda!
 
-    # Mapeando pontos por instrumento para fácil acesso
-    pontos_por_instrumento = {}
-    for ponto in pontos_com_ultimo_envio:
-        if ponto.instrumento_id not in pontos_por_instrumento:
-            pontos_por_instrumento[ponto.instrumento_id] = []
-        pontos_por_instrumento[ponto.instrumento_id].append(ponto)
+    # 2️⃣ — Conta o total filtrado (sem LIMIT)
+    count_query = f"SELECT COUNT(*) FROM ({base_query}) AS count_table"
+    with connection.cursor() as cursor:
+        cursor.execute(count_query, params)
+        total_filtrado = cursor.fetchone()[0]
 
-    # Buscando as análises de uma vez
-    envio_ids = [p.ultimo_envio_id for p in pontos_com_ultimo_envio if p.ultimo_envio_id]
-    analises = {a.envio_id: a for a in AnaliseCertificado.objects.filter(envio_id__in=envio_ids)}
-    
-    # Buscando os envios de uma vez
-    envios = {e.id: e for e in Envio.objects.filter(id__in=envio_ids)}
+    # 3️⃣ — Agora aplica ordenação e paginação na query real
+    base_query_paginated = f"{base_query} ORDER BY {order_column} {order_dir} LIMIT %s OFFSET %s"
+    params_paginated = params + [length, start]
 
-    # Processar os dados
-    hoje = date.today()
-    instrumentos_detalhes = []
-    
-    for instrumento in instrumentos_paginados:
-        designacao = instrumento.designar_instrumento.first()
-        ultima_assinatura = instrumento.assinatura_instrumento.first()
-        
-        pontos_do_instrumento_atual = pontos_por_instrumento.get(instrumento.id, [])
-        
-        # O status de calibração é baseado no primeiro ponto encontrado
-        primeiro_ponto = pontos_do_instrumento_atual[0] if pontos_do_instrumento_atual else None
-        envio_do_primeiro_ponto = envios.get(primeiro_ponto.ultimo_envio_id) if primeiro_ponto else None
+    with connection.cursor() as cursor:
+        cursor.execute(base_query_paginated, params_paginated)
+        columns = [col[0] for col in cursor.description]
+        results = [dict(zip(columns, row)) for row in cursor.fetchall()]
 
-        status_calibracao_str = calcular_status_calibracao(
-            envio_do_primeiro_ponto, instrumento.proxima_calibracao, hoje
-        )
-        status_calibracao_val = determinar_status_calibracao_val(
-            envio_do_primeiro_ponto, instrumento.proxima_calibracao, hoje
-        )
-        
-        # Aplicar filtro de status_calibracao (lógica em Python)
-        if status_calibracao and status_calibracao_val not in status_calibracao:
-            continue
+    # 4️⃣ — Conta o total geral (sem filtros)
+    with connection.cursor() as cursor:
+        cursor.execute("""
+            SELECT COUNT(*) 
+            FROM sistema_calibracao_teste.cadastro_infoinstrumento 
+        """)
+        total_geral = cursor.fetchone()[0]
 
-        pontos_formatados = []
-        for ponto in pontos_do_instrumento_atual:
-            envio = envios.get(ponto.ultimo_envio_id)
-            analise = analises.get(ponto.ultimo_envio_id)
-            pontos_formatados.append({
-                'ultimo_envio_pk': envio.id if envio else None,
-                'ponto_pk': ponto.id,
-                'ponto_descricao': ponto.descricao,
-                'ponto_faixa_nominal': ponto.faixa_nominal,
-                'ponto_unidade': ponto.unidade,
-                'ponto_tolerancia_admissivel': ponto.tolerancia_admissivel,
-                'status_ponto_calibracao': ponto.status_ponto_calibracao,
-                'ultimo_certificado': analise.analise_certificado if analise else None,
-                'analise_certificado': analise.analise_certificado if analise else None,
-                'ultimo_pdf': envio.pdf if envio else None,
-            })
 
-        if len(status_instrumento) == 1:
-            if status_instrumento[0] == 'danificado':
-                status_calibracao_str = 'N/A'
+    # Ordenação + Paginação
+    # base_query += f" ORDER BY {order_column} {order_dir} LIMIT %s OFFSET %s"
+    # params += [length, start]
 
-        if instrumento.status_instrumento == 'ativo' and  status_calibracao_str == 'Em calibração':
-            status = 'Aguardando retornar da calibração'
-        elif instrumento.status_instrumento == 'ativo':
-            status = 'Disponível'
-        else:
-            status = instrumento.status_instrumento
-
-        # proxima calibração
-        proxima_calibracao = instrumento.proxima_calibracao.strftime('%d/%m/%Y') if instrumento.proxima_calibracao else None,
-
-        if len(status_instrumento) == 1:
-            if status_instrumento[0] == 'danificado':
-                proxima_calibracao = 'N/A'
-
-        if status_calibracao_str == 'Em calibração':
-            proxima_calibracao = 'N/A'
-
-        instrumentos_detalhes.append({
-            'id': instrumento.id,
-            'tag': instrumento.tag,
-            'tipo_instrumento': instrumento.tipo_instrumento.nome,
-            'marca': instrumento.marca.nome,
-            'status_instrumento': status,
-            'ultima_calibracao': instrumento.ultima_calibracao.strftime('%d/%m/%Y') if instrumento.ultima_calibracao else None,
-            'proxima_calibracao': proxima_calibracao,
-            'status_calibracao_string': status_calibracao_str,
-            'status_calibracao': envio_do_primeiro_ponto.status if envio_do_primeiro_ponto else None,
-            'tempo_calibracao': instrumento.tempo_calibracao,
-            'responsavel': {
-                'id': designacao.responsavel.id if designacao and designacao.responsavel else None,
-                'matriculaNome': f"{designacao.responsavel.matricula} - {designacao.responsavel.nome}" if designacao and designacao.responsavel else None,
-                'dataEntrega': designacao.data_entrega_funcionario if designacao else None
-            },
-            'ultimo_assinante': {
-                'nome': ultima_assinatura.assinante.nome if ultima_assinatura and ultima_assinatura.assinante else None,
-                'id': ultima_assinatura.assinante.id if ultima_assinatura and ultima_assinatura.assinante else None
-            },
-            'pontos_calibracao': pontos_formatados
-        })
-
-    # O total filtrado é a contagem antes da paginação, mas se o filtro de status_calibracao (em python)
-    # for aplicado, precisamos ajustar.
-    total_filtrado_final = len(instrumentos_detalhes) if status_calibracao else total_filtrado_antes_paginacao
-
+    # ========================= FORMATAÇÃO =========================
     data = {
         'draw': draw,
-        'recordsTotal': InfoInstrumento.objects.filter(pontos_calibracao__isnull=False).distinct().count(), # Contagem total correta
-        'recordsFiltered': total_filtrado_final,
-        'data': instrumentos_detalhes,
+        'recordsTotal': total_geral,
+        'recordsFiltered': total_filtrado,
+        'data': [
+            {
+                'id': r['id'],
+                'tag': r['tag'],
+                'status_instrumento': r['status_instrumento'],
+                'ultima_calibracao': r['ultima_calibracao'].strftime('%d/%m/%Y') if r['ultima_calibracao'] else None,
+                'proxima_calibracao': (
+                    r['proxima_calibracao'].strftime('%d/%m/%Y')
+                    if r['proxima_calibracao'] and r['necessita_calibrar']
+                    else 'N/A (Predial)'
+                ),
+                'status_calibracao_string': (
+                    r['status_calibracao']
+                    if r['status_calibracao'] and r['necessita_calibrar']
+                    else 'N/A (Predial)'
+                ),
+                'tempo_calibracao': r['tempo_calibracao'],
+                'tipo_instrumento': r['tipo_instrumento'],
+                # você pode adicionar depois responsavel, assinatura etc. com join lateral
+            }
+            for r in results
+        ],
     }
 
     duration = time.time() - start_time
-    print(f"Duração: {duration:.2f} segundos")
-    
+    print(f"Duração total: {duration:.2f}s, registros: {total_filtrado}")
     return JsonResponse(data)
 
 @login_required
@@ -372,6 +338,8 @@ def designar_instrumentos(request):
                         data_entrega=data_entrega,
                         motivo='Entrega'
                     ))
+
+                    InfoInstrumento.objects.filter(id=instrumento.id).update(status_instrumento='em_uso')
 
                     descricao = f"Atribuindo a responsabilidade para: {funcionario.matricula} - {funcionario.nome} na data {data_entrega}"
                     registrar_primeiro_responsavel(instrumento, descricao)
@@ -791,6 +759,7 @@ def add_instrumento(request):
         status_exibido = data.get("modal-add-status")
         tempo_calib = data.get("modal-add-tempo")
         ultima_calib = data.get("modal-add-ultima")
+        necessita_calibrar = data.get("modal-add-usado-pela-predial")
 
         # Verificação antecipada para evitar consultas desnecessárias
         if not all([tag, tipo_nome, marca_nome, status_exibido, tempo_calib, ultima_calib]):
@@ -819,15 +788,11 @@ def add_instrumento(request):
                 marca=marca,
                 status_instrumento=status,
                 tempo_calibracao=tempo_calibracao,
-                ultima_calibracao=ultima_calibracao
+                ultima_calibracao=ultima_calibracao,
+                necessita_calibrar=True if necessita_calibrar in ["on", "true", "True", "1"] else False
             )
             novo_instrumento.save()
-            
-            end_time = time.time()  # Fim da medição
-            duration = end_time - start_time  # Tempo decorrido
-            
-            print(duration)
-
+                        
             return JsonResponse({"message": "Instrumento adicionado com sucesso!", "id": novo_instrumento.id})
 
         except TipoInstrumento.DoesNotExist:
@@ -871,6 +836,7 @@ def edit_instrumento(request):
                 status_exibido = data.get("modal-edit-status")
                 tempo_calib = data.get("modal-edit-tempo")
                 ultima_calib = data.get("modal-edit-ultima")
+                necessita_calibrar = data.get("modal-edit-usado-pela-predial")
 
                 # Busca o instrumento ou retorna erro se não existir
                 instrumento = get_object_or_404(InfoInstrumento, id=id)
@@ -913,6 +879,12 @@ def edit_instrumento(request):
                     ultima_calibracao_date = parse_date(ultima_calib)
                     if instrumento.ultima_calibracao != ultima_calibracao_date:
                         alteracoes["ultima_calibracao"] = ultima_calibracao_date
+
+                # Atualiza checkbox de usado_pela_predial
+                if necessita_calibrar is not None:
+                    novo_valor = True if str(necessita_calibrar).lower() in ["true", "1", "on", "yes"] else False
+                    if instrumento.necessita_calibrar != novo_valor:
+                        alteracoes["necessita_calibrar"] = novo_valor
 
                 # Se houver mudanças, atualiza e salva o objeto
                 if alteracoes:
@@ -1221,3 +1193,70 @@ def edit_certificado(request, id):
             return JsonResponse({"error": str(e)}, status=500)
     
     return JsonResponse({"message": "Método não permitido"}, status=405)
+
+def api_responsavel(request, instrumento_id):
+    designacao = DesignarInstrumento.objects.select_related('responsavel')\
+                    .filter(instrumento_escolhido_id=instrumento_id)\
+                    .order_by('-data_entrega_funcionario')\
+                    .first()
+
+    if not designacao or not designacao.responsavel:
+        return JsonResponse({'id': None, 'matriculaNome': None, 'dataEntrega': None})
+
+    r = designacao.responsavel
+    return JsonResponse({
+        'id': r.id,
+        'matriculaNome': f"{r.matricula} - {r.nome}",
+        'dataEntrega': designacao.data_entrega_funcionario
+    })
+
+def api_instrumento_detalhes(request, id):
+    try:
+        instrumento = InfoInstrumento.objects.select_related(
+            'tipo_instrumento', 'marca'
+        ).get(pk=id)
+    except InfoInstrumento.DoesNotExist:
+        raise Http404("Instrumento não encontrado")
+
+    # Buscar todos os pontos de calibração do instrumento
+    pontos = PontoCalibracao.objects.filter(instrumento_id=id)
+
+    dados_pontos = []
+    for ponto in pontos:
+        # Último envio do ponto
+        ultimo_envio = (
+            Envio.objects.filter(ponto_calibracao=ponto)
+            .order_by('-id')
+            .first()
+        )
+
+        # Última análise (se houver)
+        analise = (
+            AnaliseCertificado.objects.filter(envio=ultimo_envio)
+            .order_by('-id')
+            .first()
+            if ultimo_envio
+            else None
+        )
+
+        dados_pontos.append({
+            "ponto_pk": ponto.id,
+            "ponto_descricao": ponto.descricao,
+            "ponto_faixa_nominal": ponto.faixa_nominal,
+            "ponto_unidade": ponto.unidade,
+            "ponto_tolerancia_admissivel": ponto.tolerancia_admissivel,
+            "status_ponto_calibracao": ponto.status_ponto_calibracao,
+            "ultimo_envio_pk": ultimo_envio.id if ultimo_envio else None,
+            "analise_certificado": analise.analise_certificado if analise else None,
+            "ultimo_certificado": analise.analise_certificado if analise else None,  # campo 'aprovado/reprovado'
+            "ultimo_pdf": ultimo_envio.pdf if ultimo_envio else None,
+        })
+
+    data = {
+        "id": instrumento.id,
+        "tag": instrumento.tag,
+        "status_calibracao": ultimo_envio.status if ultimo_envio else None,
+        "pontos_calibracao": dados_pontos,
+    }
+
+    return JsonResponse(data)

@@ -10,7 +10,9 @@ document.addEventListener("DOMContentLoaded", function() {
                 status: this.getAttribute("data-status"),
                 tempo: this.getAttribute("data-tempo"),
                 ultima: this.getAttribute("data-ultima"),
-                proxima: this.getAttribute("data-proxima")
+                proxima: this.getAttribute("data-proxima"),
+                // usa dataset para maior compatibilidade com data-*
+                usado_pela_predial: this.dataset ? this.dataset.usadoPelaPredial : this.getAttribute("data-usado-pela-predial")
             };
 
             $("#modalEditar").modal("show");
@@ -28,6 +30,11 @@ document.addEventListener("DOMContentLoaded", function() {
             document.getElementById("modal-edit-tempo").value = instrumento.tempo;
             document.getElementById("modal-edit-ultima").value = instrumento.ultima;
             document.getElementById("modal-edit-proxima").value = instrumento.proxima;
+            const cbUsado = document.getElementById("modal-edit-usado-pela-predial");
+            if (cbUsado) {
+                const raw = (instrumento.usado_pela_predial ?? '').toString().trim().toLowerCase();
+                cbUsado.checked = ['true','1','on','yes'].includes(raw);
+            }
             typeSelect.value = "Carregando...";
 
             const statusSelect = document.getElementById("modal-edit-status");
@@ -88,6 +95,11 @@ document.addEventListener("DOMContentLoaded", function() {
         formData.forEach((value, key) => {
             jsonData[key] = value;
         });
+        // Inclui explicitamente o valor do checkbox (mesmo quando desmarcado)
+        const cbUsado = document.getElementById('modal-edit-usado-pela-predial');
+        if (cbUsado) {
+            jsonData['modal-edit-usado-pela-predial'] = cbUsado.checked ? 'true' : 'false';
+        }
 
         const csrfToken = document.querySelector('input[name="csrfmiddlewaretoken"]').value;
 

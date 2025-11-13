@@ -128,6 +128,7 @@ class InfoInstrumento(models.Model):
     ultima_calibracao = models.DateField()
     proxima_calibracao = models.DateField(blank=True, null=True)
     qrcode = models.ImageField(upload_to='qrcodes/', blank=True, null=True)
+    necessita_calibrar = models.BooleanField(default=True)
 
     def save(self, *args, **kwargs):
         if self.ultima_calibracao:

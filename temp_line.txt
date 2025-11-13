@@ -1,0 +1,1 @@
+        # Filtro normalizado de status_calibracao\n        val_norm = _normalize_label(status_calibracao_val)\n        val_key = status_map.get(val_norm)\n        if selected_status_keys and val_key not in selected_status_keys:\n            continue

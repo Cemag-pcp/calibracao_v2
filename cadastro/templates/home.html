@@ -30,12 +30,12 @@
                 <div class="h3 mb-0" id="count-em-uso">—</div>
             </div>
         </div>
-    </div>
+    </div>    
     <div class="col-6 col-lg-3">
         <div class="card border-0 shadow-sm">
             <div class="card-body">
-                <div class="text-muted small">Disponíveis</div>
-                <div class="h3 mb-0" id="count-disponivel">—</div>
+                <div class="text-muted small">Em atraso</div>
+                <div class="h3 mb-0" id="count-em-atraso">—</div>
             </div>
         </div>
     </div>
@@ -64,6 +64,13 @@
 
             <h6 class="mt-3">Pesquisar Tipo de Instrumento</h6>
             <input type="text" class="form-control mb-3" id="pesquisar-tipo-calibracao" placeholder="Pesquisar o instrumento...">
+
+            <h6 class="mt-3">Obrigatoriedade de calibração</h6>
+            <select id="filtro-obrigacao-calibracao" class="form-select mb-3">
+                <option value="">Todos</option>
+                <option value="true">Obrigatório calibrar</option>
+                <option value="false">Não obrigatório calibrar</option>
+            </select>
 
             <h6 class="mt-3">Intervalo de data da última calibração</h6>
             <div class="d-flex justify-content-between align-items-center">
@@ -105,10 +112,10 @@
     </form>
 </div>
 
-<div class="d-flex justify-content-end gap-2 my-2">
+<!-- <div class="d-flex justify-content-end gap-2 my-2">
     <span id="qtd-pendente-calibracao" class="rounded-pill py-1 px-2" style="background-color: #ef4444; color: #fafafa; font-weight: 600; font-size: 0.75rem;"><span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span></span>
     <span id="qtd-filtrada-calibracao" class="rounded-pill py-1 px-2" style="background-color: #f59e0b; color: #fafafa; font-weight: 600; font-size: 0.75rem; display: none;"></span>
-</div>
+</div> -->
 <div class="d-flex justify-content-end flex-wrap gap-2 my-2">
     <span id="itens-filtrados-calibracao-tag" class="rounded-pill py-1 px-2" style="background-color: #ebebeb; color: #3d3d3d; font-weight: 600; font-size: 0.75rem; display: none;"></span>
     <span id="itens-filtrados-calibracao-tipo" class="rounded-pill py-1 px-2" style="background-color: #ebebeb; color: #3d3d3d; font-weight: 600; font-size: 0.75rem; display: none;"></span>
@@ -116,6 +123,7 @@
     <span id="itens-filtrados-calibracao-data-proxima" class="rounded-pill py-1 px-2" style="background-color: #ebebeb; color: #3d3d3d; font-weight: 600; font-size: 0.75rem; display: none;"></span>
     <span id="itens-filtrados-calibracao-status-instrumento" class="rounded-pill py-1 px-2" style="background-color: #ebebeb; color: #3d3d3d; font-weight: 600; font-size: 0.75rem; display: none;"></span>
     <span id="itens-filtrados-calibracao-status-calibracao" class="rounded-pill py-1 px-2" style="background-color: #ebebeb; color: #3d3d3d; font-weight: 600; font-size: 0.75rem; display: none;"></span>
+    <span id="itens-filtrados-calibracao-obrigacao" class="rounded-pill py-1 px-2" style="background-color: #ebebeb; color: #3d3d3d; font-weight: 600; font-size: 0.75rem; display: none;"></span>
 </div>
 
 <!-- Tabs de status -->
@@ -140,14 +148,13 @@
 <table id="instrumentos-table" class="display table table-striped table-bordered">
     <thead>
         <tr>
-            <th></th>
+            <th>Pontos de calibração</th>
             <th>Tag</th>
             <th>Tipo de Instrumento</th>
             <th>Status</th>
             <th>Última Calibração</th>
             <th>Próxima Calibração</th>
             <th>Status Calibração</th>
-            <th>Status Geral</th>
             <th>Responsável</th>
             <th>Ação</th>
         </tr>
@@ -800,7 +807,7 @@
                     <div class="row mb-3 designar-varios-instrumentos">
                         <div class="col-sm-12">
                             <label for="instrumento-designado">Instrumento</label>
-                            <select class="form-control instrumento-designado" required>
+                            <select class="form-control instrumento-designado select2" required>
                             </select>
                         </div>
                     </div>
@@ -872,7 +879,6 @@
                     if (data) {
                         document.getElementById('count-em-calibracao').innerText = data.em_calibracao ?? 0;
                         document.getElementById('count-em-uso').innerText = data.em_uso ?? 0;
-                        document.getElementById('count-disponivel').innerText = data.disponivel ?? 0;
                         document.getElementById('count-danificado').innerText = data.danificado ?? 0;
                     }
                 })
@@ -881,11 +887,26 @@
                 });
         }
 
+        function carregarContadorAtrasado() {
+            fetch('/counts-atrasados/')
+                .then(resp => resp.json())
+                .then(data => {
+                    if (data) {
+                        document.getElementById('count-em-atraso').innerText = data.em_atraso ?? 0;
+                    }
+                })
+                .catch(() => {
+                    // Em caso de erro, mantem traço
+                });
+        }
+
+
         $(function () {
             // Inicializa com a aba "Em uso"
             setStatusTab('em_uso', 'instrumento');
             // Carrega os contadores dos cards
             carregarContadores();
+            carregarContadorAtrasado();
 
             // Clique nas abas
             $('#statusTabs .nav-link').on('click', function () {

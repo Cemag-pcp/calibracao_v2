@@ -8,6 +8,7 @@ urlpatterns = [
     path('home/', views.home, name='home'),
     path('instrumentos-data/', views.instrumentos_data, name='instrumentos_data'),
     path('dashboard-counts/', views_counts.dashboard_counts, name='dashboard_counts'),
+    path('counts-atrasados/', views_counts.counts_atrasado, name='counts_atrasado'),
 
     path('instrumento/qrcode/<str:tag>/', views.qrcode_view, name='qrcode_view'),
     path('instrumento/historico/<str:tag>/<int:pk_ponto>/', views.historico_view, name='historico_view'),
@@ -35,4 +36,8 @@ urlpatterns = [
     path('historico/datatable/<int:id>/', views.historico_datatable_instrumento, name='historico-datatable-instrumento'),
 
     path('designar-mais-instrumentos/', views.designar_instrumentos, name='designar-instrumentos'),
+
+    path('api/responsavel/<int:instrumento_id>/', views.api_responsavel, name='api_responsavel'),
+    path('api/instrumentos/<int:id>/detalhes/', views.api_instrumento_detalhes, name='api_instrumento_detalhes'),
+
 ]

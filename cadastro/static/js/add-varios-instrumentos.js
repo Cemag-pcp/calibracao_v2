@@ -9,11 +9,32 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Clear the values in the cloned selects
         const selects = clone.querySelectorAll('select');
-        selects.forEach(select => select.value = '');
+        selects.forEach(select => {
+            // Repopula opções copiando do select original correspondente (se existir)
+            const originalSelect = originalElement.querySelector(`select.${select.classList[1]}`) || originalElement.querySelector('select');
+            if (originalSelect) select.innerHTML = originalSelect.innerHTML;
+            select.value = '';
+            // Garante classe select2
+            if (!select.classList.contains('select2')) {
+                select.classList.add('select2');
+            }
+        });
+
+        // Remove possíveis containers clonado do Select2
+        const clonedContainers = clone.querySelectorAll('.select2-container');
+        clonedContainers.forEach(c => c.remove());
 
         // Insert the clone before the add/remove buttons
         const container = document.getElementById('add_remove_cause');
         container.parentNode.insertBefore(clone, container);
+
+        // Inicializa Select2 nos selects clonados
+        $(clone).find('select.select2').each(function() {
+            $(this).select2({
+                dropdownParent: $('#modalDesignarMaisDeUmInstrumento'),
+                width: '100%'
+            });
+        });
 
         // Enable the remove button
         removeButton.disabled = false;
